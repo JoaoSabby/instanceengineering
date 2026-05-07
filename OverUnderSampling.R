@@ -25,7 +25,7 @@ OverUnderLoadPackages <- function(){
     return(invisible(TRUE))
   }
 
-  packageNames <- c("FNN", "Matrix")
+  packageNames <- "FNN"
   for(packageName in packageNames){
     if(!requireNamespace(packageName, quietly = TRUE)){
       stop("Pacote necessario nao encontrado: ", packageName, call. = FALSE)
@@ -86,7 +86,7 @@ ValidateSamplingInputs <- function(
     stop("Cada classe deve ter ao menos 2 observacoes", call. = FALSE)
   }
 
-  if(!is.numeric(seed) || length(seed) != 1L || is.na(seed)){
+  if(!is.numeric(seed) || length(seed) != 1L || is.na(seed) || !is.finite(seed)){
     stop("'seed' deve ser escalar numerico", call. = FALSE)
   }
 
@@ -101,6 +101,43 @@ OverUnderGetColumnNames <- function(predictorData){
     columnNames <- paste0("V", seq_len(NCOL(predictorData)))
   }
   columnNames
+}
+
+
+#' Identificar classes minoritaria e majoritaria
+#' @noRd
+GetBinaryClassRoles <- function(targetFactor){
+  classCounts <- table(targetFactor)
+  if(length(classCounts) != 2L){
+    stop("'targetVector' deve ser binario", call. = FALSE)
+  }
+  if(classCounts[[1L]] == classCounts[[2L]]){
+    stop("As rotinas de sampling requerem classes desbalanceadas", call. = FALSE)
+  }
+
+  list(
+    classCounts = classCounts,
+    minorityLabel = names(classCounts)[which.min(classCounts)],
+    majorityLabel = names(classCounts)[which.max(classCounts)]
+  )
+}
+
+#' Validar parametros de escala precomputados
+#' @noRd
+ValidateScalingInfo <- function(scalingInfo, predictorColumnCount){
+  if(!is.list(scalingInfo) || is.null(scalingInfo$centers) || is.null(scalingInfo$scales)){
+    stop("'precomputedScaling' deve conter 'centers' e 'scales'", call. = FALSE)
+  }
+  if(length(scalingInfo$centers) != predictorColumnCount || length(scalingInfo$scales) != predictorColumnCount){
+    stop("'precomputedScaling' deve ter um centro e uma escala por coluna", call. = FALSE)
+  }
+  if(anyNA(scalingInfo$centers) || anyNA(scalingInfo$scales) || any(!is.finite(scalingInfo$centers)) || any(!is.finite(scalingInfo$scales))){
+    stop("'precomputedScaling' contem valores ausentes ou infinitos", call. = FALSE)
+  }
+  if(any(scalingInfo$scales <= 0)){
+    stop("'precomputedScaling$scales' deve conter apenas valores positivos", call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 #' Converter preditores para matrix double sem copias redundantes desnecessarias
@@ -147,14 +184,20 @@ InferNumericColumnTypes <- function(dataFrame){
 ComputeZScoreParams <- function(xMatrix){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
   centers <- colMeans(xMatrix)
-  scales <- apply(xMatrix, 2L, stats::sd)
 
-  invalid <- is.na(scales) | scales <= 0
+  centered <- sweep(xMatrix, 2L, centers, FUN = "-")
+  scales <- sqrt(colSums(centered * centered) / (nrow(xMatrix) - 1L))
+
+  invalid <- is.na(scales) | !is.finite(scales) | scales <= 0
   if(any(invalid)){
+    columnNames <- colnames(xMatrix)
+    if(is.null(columnNames)){
+      columnNames <- paste0("V", seq_len(NCOL(xMatrix)))
+    }
     stop(
       paste0(
         "Colunas com desvio padrao zero ou indefinido: ",
-        paste(colnames(xMatrix)[invalid], collapse = ", ")
+        paste(columnNames[invalid], collapse = ", ")
       ),
       call. = FALSE
     )
@@ -167,6 +210,7 @@ ComputeZScoreParams <- function(xMatrix){
 #' @noRd
 ApplyZScoreScalingMatrix <- function(xMatrix, scalingInfo){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
+  ValidateScalingInfo(scalingInfo, NCOL(xMatrix))
   scaled <- sweep(xMatrix, 2L, scalingInfo$centers, FUN = "-")
   scaled <- sweep(scaled, 2L, scalingInfo$scales, FUN = "/")
   storage.mode(scaled) <- "double"
@@ -177,6 +221,7 @@ ApplyZScoreScalingMatrix <- function(xMatrix, scalingInfo){
 #' @noRd
 RevertZScoreScalingMatrix <- function(xMatrix, scalingInfo){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
+  ValidateScalingInfo(scalingInfo, NCOL(xMatrix))
   restored <- sweep(xMatrix, 2L, scalingInfo$scales, FUN = "*")
   restored <- sweep(restored, 2L, scalingInfo$centers, FUN = "+")
   storage.mode(restored) <- "double"
@@ -226,8 +271,8 @@ ComputeMinorityExpansionCount <- function(targetFactor, overRatio){
     stop("'overRatio' deve ser escalar numerico nao negativo", call. = FALSE)
   }
 
-  classCounts <- sort(table(targetFactor))
-  minorityCount <- as.integer(classCounts[[1L]])
+  classRoles <- GetBinaryClassRoles(targetFactor)
+  minorityCount <- as.integer(classRoles$classCounts[classRoles$minorityLabel])
   syntheticCount <- floor(minorityCount * overRatio)
 
   if(syntheticCount < 1L){
@@ -244,8 +289,8 @@ ComputeMajorityRetentionCount <- function(targetFactor, underRatio){
     stop("'underRatio' deve estar no intervalo (0, 1]", call. = FALSE)
   }
 
-  classCounts <- sort(table(targetFactor))
-  majorityCount <- as.integer(classCounts[[2L]])
+  classRoles <- GetBinaryClassRoles(targetFactor)
+  majorityCount <- as.integer(classRoles$classCounts[classRoles$majorityLabel])
   retainedCount <- floor(majorityCount * underRatio)
 
   if(retainedCount < 1L){
@@ -255,36 +300,69 @@ ComputeMajorityRetentionCount <- function(targetFactor, underRatio){
   retainedCount
 }
 
-#' Extrair resultado ADASYN de forma defensiva
+#' Gerar amostras sinteticas ADASYN em matriz ja escalada
 #' @noRd
-ExtractAdasynResult <- function(adasynResult, predictorColumnCount){
-  resultNames <- names(adasynResult)
-  predictorMatrixBalanced <- NULL
-  targetBalanced <- NULL
+GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, knnAlgorithm){
+  classRoles <- GetBinaryClassRoles(targetFactor)
+  minorityIndex <- which(targetFactor == classRoles$minorityLabel)
+  minorityMatrix <- xScaled[minorityIndex, , drop = FALSE]
 
-  if("X_new" %in% resultNames){
-    predictorMatrixBalanced <- adasynResult$X_new
-  } else if("X" %in% resultNames){
-    predictorMatrixBalanced <- adasynResult$X
-  } else if("data" %in% resultNames){
-    predictorMatrixBalanced <- adasynResult$data[, seq_len(predictorColumnCount), drop = FALSE]
+  effectiveAllK <- min(as.integer(kOver) + 1L, nrow(xScaled))
+  allNeighborResult <- FNN::get.knnx(
+    data = xScaled,
+    query = minorityMatrix,
+    k = effectiveAllK,
+    algorithm = knnAlgorithm
+  )
+
+  neighborIndex <- allNeighborResult$nn.index
+  if(effectiveAllK > 1L){
+    neighborIndex <- neighborIndex[, -1L, drop = FALSE]
+  }
+  majorityMask <- targetFactor[as.vector(neighborIndex)] == classRoles$majorityLabel
+  majorityRatio <- rowMeans(matrix(majorityMask, nrow = nrow(neighborIndex), ncol = ncol(neighborIndex)))
+  if(sum(majorityRatio) <= 0){
+    generationWeights <- rep.int(1 / length(minorityIndex), length(minorityIndex))
   } else {
-    stop("Nao foi possivel identificar a saida de preditores do ADASYN", call. = FALSE)
+    generationWeights <- majorityRatio / sum(majorityRatio)
   }
 
-  if("target_new" %in% resultNames){
-    targetBalanced <- adasynResult$target_new
-  } else if("target" %in% resultNames){
-    targetBalanced <- adasynResult$target
-  } else if("data" %in% resultNames){
-    targetBalanced <- adasynResult$data[, predictorColumnCount + 1L, drop = TRUE]
-  } else {
-    stop("Nao foi possivel identificar a saida do target do ADASYN", call. = FALSE)
+  rawCounts <- syntheticCount * generationWeights
+  syntheticPerRow <- floor(rawCounts)
+  remaining <- syntheticCount - sum(syntheticPerRow)
+  if(remaining > 0L){
+    fractionalOrder <- order(rawCounts - syntheticPerRow, decreasing = TRUE)
+    syntheticPerRow[fractionalOrder[seq_len(remaining)]] <- syntheticPerRow[fractionalOrder[seq_len(remaining)]] + 1L
   }
+
+  effectiveMinorityK <- min(as.integer(kOver) + 1L, nrow(minorityMatrix))
+  minorityNeighborResult <- FNN::get.knnx(
+    data = minorityMatrix,
+    query = minorityMatrix,
+    k = effectiveMinorityK,
+    algorithm = knnAlgorithm
+  )
+  minorityNeighborIndex <- minorityNeighborResult$nn.index
+  if(effectiveMinorityK > 1L){
+    minorityNeighborIndex <- minorityNeighborIndex[, -1L, drop = FALSE]
+  }
+
+  syntheticMatrix <- matrix(0, nrow = syntheticCount, ncol = NCOL(xScaled))
+  writeStart <- 1L
+  for(i in which(syntheticPerRow > 0L)){
+    rowCount <- syntheticPerRow[[i]]
+    writeEnd <- writeStart + rowCount - 1L
+    baseRows <- matrix(minorityMatrix[i, ], nrow = rowCount, ncol = NCOL(xScaled), byrow = TRUE)
+    selectedNeighborRows <- minorityNeighborIndex[i, sample.int(ncol(minorityNeighborIndex), rowCount, replace = TRUE)]
+    neighborRows <- minorityMatrix[selectedNeighborRows, , drop = FALSE]
+    syntheticMatrix[writeStart:writeEnd, ] <- baseRows + stats::runif(rowCount) * (neighborRows - baseRows)
+    writeStart <- writeEnd + 1L
+  }
+  colnames(syntheticMatrix) <- colnames(xScaled)
 
   list(
-    predictorMatrixBalanced = OverUnderAsNumericMatrix(predictorMatrixBalanced),
-    targetBalanced = as.factor(targetBalanced)
+    x = rbind(xScaled, syntheticMatrix),
+    y = factor(c(as.character(targetFactor), rep.int(classRoles$minorityLabel, syntheticCount)), levels = levels(targetFactor))
   )
 }
 
@@ -298,6 +376,7 @@ ExtractAdasynResult <- function(adasynResult, predictorColumnCount){
 #' @param returnScaled logical; retorna tambem matriz escalada
 #' @param restoreTypes logical; restaura tipos ao final
 #' @param output formato de saida: "data.frame" ou "matrix"
+#' @param knnAlgorithm algoritmo para FNN::get.knnx
 #' @export
 ApplyAdasynOversampling <- function(
   predictorData,
@@ -307,14 +386,12 @@ ApplyAdasynOversampling <- function(
   seed = 42L,
   returnScaled = FALSE,
   restoreTypes = TRUE,
-  output = c("data.frame", "matrix")
+  output = c("data.frame", "matrix"),
+  knnAlgorithm = c("cover_tree", "kd_tree", "brute")
 ){
   output <- match.arg(output)
+  knnAlgorithm <- match.arg(knnAlgorithm)
   ValidateSamplingInputs(predictorData, targetVector, seed)
-
-  if(!requireNamespace("SMOTEWB", quietly = TRUE)){
-    stop("Pacote necessario nao encontrado: SMOTEWB", call. = FALSE)
-  }
 
   if(!is.numeric(kOver) || length(kOver) != 1L || is.na(kOver) || kOver < 1L){
     stop("'kOver' deve ser inteiro positivo", call. = FALSE)
@@ -329,17 +406,16 @@ ApplyAdasynOversampling <- function(
   syntheticCount <- ComputeMinorityExpansionCount(targetFactor, overRatio)
 
   set.seed(seed)
-  adasynResult <- SMOTEWB::ADASYN(
-    x = xScaled,
-    y = targetFactor,
-    k = as.integer(kOver),
-    ovRate = as.integer(syntheticCount)
+  adasynResult <- GenerateAdasynSamples(
+    xScaled = xScaled,
+    targetFactor = targetFactor,
+    syntheticCount = syntheticCount,
+    kOver = kOver,
+    knnAlgorithm = knnAlgorithm
   )
+  colnames(adasynResult$x) <- colnames(xMatrix)
 
-  extracted <- ExtractAdasynResult(adasynResult, predictorColumnCount = NCOL(xScaled))
-  colnames(extracted$predictorMatrixBalanced) <- colnames(xMatrix)
-
-  xRestored <- RevertZScoreScalingMatrix(extracted$predictorMatrixBalanced, scalingInfo)
+  xRestored <- RevertZScoreScalingMatrix(adasynResult$x, scalingInfo)
 
   finalPredictors <- if(restoreTypes) {
     RestoreNumericColumnTypes(xRestored, typeInfo, asDataFrame = identical(output, "data.frame"))
@@ -351,18 +427,18 @@ ApplyAdasynOversampling <- function(
 
   balancedData <- if(identical(output, "data.frame")) {
     out <- finalPredictors
-    out$TARGET <- as.factor(extracted$targetBalanced)
+    out$TARGET <- as.factor(adasynResult$y)
     out
   } else {
-    list(x = OverUnderAsNumericMatrix(finalPredictors), y = as.factor(extracted$targetBalanced))
+    list(x = OverUnderAsNumericMatrix(finalPredictors), y = as.factor(adasynResult$y))
   }
 
   diagnostics <- list(
     inputRows = NROW(xMatrix),
     outputRows = if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x),
-    generatedRows = if(identical(output, "data.frame")) nrow(balancedData) - nrow(xMatrix) else nrow(balancedData$x) - nrow(xMatrix),
+    generatedRows = (if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x)) - nrow(xMatrix),
     inputClassDistribution = table(targetFactor),
-    outputClassDistribution = table(as.factor(extracted$targetBalanced))
+    outputClassDistribution = table(as.factor(adasynResult$y))
   )
 
   result <- list(
@@ -374,8 +450,8 @@ ApplyAdasynOversampling <- function(
 
   if(isTRUE(returnScaled)){
     result$balancedScaled <- list(
-      x = extracted$predictorMatrixBalanced,
-      y = as.factor(extracted$targetBalanced)
+      x = adasynResult$x,
+      y = as.factor(adasynResult$y)
     )
   }
 
@@ -392,6 +468,7 @@ ApplyAdasynOversampling <- function(
 #' @param precomputedScaling lista opcional com centers e scales
 #' @param inputAlreadyScaled logical indicando se predictorData ja esta escalado
 #' @param restoreTypes logical; restaura tipos ao final
+#' @param typeInfo informacao opcional de tipos original
 #' @param output formato de saida: "data.frame" ou "matrix"
 #' @param knnAlgorithm algoritmo para FNN::get.knnx
 #' @export
@@ -404,6 +481,7 @@ ApplyNearmissUndersampling <- function(
   precomputedScaling = NULL,
   inputAlreadyScaled = FALSE,
   restoreTypes = TRUE,
+  typeInfo = NULL,
   output = c("data.frame", "matrix"),
   knnAlgorithm = c("cover_tree", "kd_tree", "brute")
 ){
@@ -418,54 +496,61 @@ ApplyNearmissUndersampling <- function(
   xMatrix <- OverUnderAsNumericMatrix(predictorData)
   colnames(xMatrix) <- OverUnderGetColumnNames(predictorData)
   targetFactor <- as.factor(targetVector)
-  typeInfo <- InferNumericColumnTypes(predictorData)
+  typeInfo <- if(is.null(typeInfo)) InferNumericColumnTypes(predictorData) else typeInfo
+  if(NCOL(xMatrix) != nrow(typeInfo)){
+    stop("'typeInfo' deve ter uma linha por coluna de 'predictorData'", call. = FALSE)
+  }
 
   scalingInfo <- if(isTRUE(inputAlreadyScaled)) {
+    if(is.null(precomputedScaling)){
+      stop("'precomputedScaling' e obrigatorio quando 'inputAlreadyScaled = TRUE'", call. = FALSE)
+    }
     precomputedScaling
   } else if(is.null(precomputedScaling)) {
     ComputeZScoreParams(xMatrix)
   } else {
+    ValidateScalingInfo(precomputedScaling, NCOL(xMatrix))
     precomputedScaling
   }
 
   xScaled <- if(isTRUE(inputAlreadyScaled)) xMatrix else ApplyZScoreScalingMatrix(xMatrix, scalingInfo)
 
   classCounts <- table(targetFactor)
-  minorityLabel <- names(classCounts)[which.min(classCounts)]
-  majorityLabel <- names(classCounts)[which.max(classCounts)]
-
-  minorityIndex <- which(targetFactor == minorityLabel)
-  majorityIndex <- which(targetFactor == majorityLabel)
-
-  minorityMatrix <- xScaled[minorityIndex, , drop = FALSE]
-  majorityMatrix <- xScaled[majorityIndex, , drop = FALSE]
-
-  retainedMajorityCount <- ComputeMajorityRetentionCount(targetFactor, underRatio)
-  effectiveK <- min(as.integer(kUnder), nrow(minorityMatrix))
-  if(effectiveK < 1L){
-    stop("Sem linhas minoritarias suficientes para NearMiss", call. = FALSE)
-  }
-
-  set.seed(seed)
-  knnResult <- FNN::get.knnx(
-    data = minorityMatrix,
-    query = majorityMatrix,
-    k = effectiveK,
-    algorithm = knnAlgorithm
-  )
-
-  meanDistances <- rowMeans(knnResult$nn.dist)
-  selectedOrder <- order(meanDistances, decreasing = FALSE)
-  selectedMajorityIndex <- majorityIndex[selectedOrder[seq_len(retainedMajorityCount)]]
-  retainedIndex <- sort(c(minorityIndex, selectedMajorityIndex))
-
-  reducedScaled <- xScaled[retainedIndex, , drop = FALSE]
-  reducedTarget <- targetFactor[retainedIndex]
-  xRestored <- if(isTRUE(inputAlreadyScaled)) {
-    RevertZScoreScalingMatrix(reducedScaled, scalingInfo)
+  if(classCounts[[1L]] == classCounts[[2L]]){
+    retainedIndex <- seq_len(nrow(xScaled))
+    reducedScaled <- xScaled
+    reducedTarget <- targetFactor
   } else {
-    RevertZScoreScalingMatrix(reducedScaled, scalingInfo)
+    classRoles <- GetBinaryClassRoles(targetFactor)
+    minorityIndex <- which(targetFactor == classRoles$minorityLabel)
+    majorityIndex <- which(targetFactor == classRoles$majorityLabel)
+
+    minorityMatrix <- xScaled[minorityIndex, , drop = FALSE]
+    majorityMatrix <- xScaled[majorityIndex, , drop = FALSE]
+
+    retainedMajorityCount <- ComputeMajorityRetentionCount(targetFactor, underRatio)
+    effectiveK <- min(as.integer(kUnder), nrow(minorityMatrix))
+    if(effectiveK < 1L){
+      stop("Sem linhas minoritarias suficientes para NearMiss", call. = FALSE)
+    }
+
+    set.seed(seed)
+    knnResult <- FNN::get.knnx(
+      data = minorityMatrix,
+      query = majorityMatrix,
+      k = effectiveK,
+      algorithm = knnAlgorithm
+    )
+
+    meanDistances <- rowMeans(knnResult$nn.dist)
+    selectedOrder <- order(meanDistances, decreasing = FALSE)
+    selectedMajorityIndex <- majorityIndex[selectedOrder[seq_len(retainedMajorityCount)]]
+    retainedIndex <- sort(c(minorityIndex, selectedMajorityIndex))
+
+    reducedScaled <- xScaled[retainedIndex, , drop = FALSE]
+    reducedTarget <- targetFactor[retainedIndex]
   }
+  xRestored <- RevertZScoreScalingMatrix(reducedScaled, scalingInfo)
 
   finalPredictors <- if(restoreTypes) {
     RestoreNumericColumnTypes(xRestored, typeInfo, asDataFrame = identical(output, "data.frame"))
@@ -486,7 +571,7 @@ ApplyNearmissUndersampling <- function(
   diagnostics <- list(
     inputRows = nrow(xMatrix),
     outputRows = if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x),
-    removedRows = nrow(xMatrix) - if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x),
+    removedRows = nrow(xMatrix) - (if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x)),
     inputClassDistribution = table(targetFactor),
     outputClassDistribution = table(as.factor(reducedTarget))
   )
@@ -536,7 +621,8 @@ OverUnderSampling <- function(
     seed = seed,
     returnScaled = TRUE,
     restoreTypes = FALSE,
-    output = "matrix"
+    output = "matrix",
+    knnAlgorithm = knnAlgorithm
   )
 
   underResult <- ApplyNearmissUndersampling(
@@ -548,6 +634,7 @@ OverUnderSampling <- function(
     precomputedScaling = overResult$scalingInfo,
     inputAlreadyScaled = TRUE,
     restoreTypes = restoreTypes,
+    typeInfo = overResult$typeInfo,
     output = output,
     knnAlgorithm = knnAlgorithm
   )
