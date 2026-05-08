@@ -2,7 +2,7 @@
 
 Este repositório agora é um **pacote R** para balanceamento binário com **ADASYN** (oversampling) seguido de **NearMiss-1** (undersampling), com caminho crítico otimizado para matriz numérica, uso de **Rfast** e aceleração em **C puro** compilada pelo próprio mecanismo de instalação do R.
 
-## O que foi revisado em `ideias.txt`
+## O que foi revisado
 
 A revisão priorizou desempenho sem abrir mão de segurança numérica e reprodutibilidade.
 
