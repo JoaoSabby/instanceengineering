@@ -18,6 +18,33 @@ NULL
 .OverUnderState <- new.env(parent = emptyenv())
 .OverUnderState$packagesLoaded <- FALSE
 
+#' Emitir erro padronizado com cli
+#' @noRd
+OverUnderAbort <- function(message){
+  if(requireNamespace("cli", quietly = TRUE)){
+    cli::cli_abort(message, call = NULL)
+  }
+  stop(message, call. = FALSE)
+}
+
+#' Emitir aviso padronizado com cli
+#' @noRd
+OverUnderWarn <- function(message){
+  if(requireNamespace("cli", quietly = TRUE)){
+    return(cli::cli_warn(message, call = NULL))
+  }
+  warning(message, call. = FALSE)
+}
+
+#' Emitir mensagem informativa padronizada com cli
+#' @noRd
+OverUnderInform <- function(message){
+  if(requireNamespace("cli", quietly = TRUE)){
+    return(cli::cli_inform(message))
+  }
+  message(message)
+}
+
 #' Carregar dependencias do fluxo de sampling
 #' @noRd
 OverUnderLoadPackages <- function(){
@@ -25,15 +52,181 @@ OverUnderLoadPackages <- function(){
     return(invisible(TRUE))
   }
 
-  packageNames <- "FNN"
+  packageNames <- c("cli", "Rfast")
   for(packageName in packageNames){
     if(!requireNamespace(packageName, quietly = TRUE)){
-      stop("Pacote necessario nao encontrado: ", packageName, call. = FALSE)
+      OverUnderAbort(paste0("Pacote necessario nao encontrado: ", packageName))
     }
   }
 
   .OverUnderState$packagesLoaded <- TRUE
   invisible(TRUE)
+}
+
+#' Verificar se a biblioteca nativa do pacote esta carregada
+#' @noRd
+OverUnderNativeAvailable <- function(){
+  is.loaded("OU_GenerateSyntheticAdasynC", PACKAGE = "instanceengineering")
+}
+
+#' Resolver algoritmo KNN automatico quando solicitado
+#' @noRd
+ResolveKnnAlgorithm <- function(knnAlgorithm, predictorColumnCount){
+  if(!identical(knnAlgorithm, "auto")){
+    return(knnAlgorithm)
+  }
+
+  if(predictorColumnCount > 15L){
+    "brute"
+  } else {
+    "kd_tree"
+  }
+}
+
+#' Resolver backend KNN automatico quando solicitado
+#' @noRd
+ResolveKnnBackend <- function(knnBackend, knnWorkers){
+  if(!identical(knnBackend, "auto")){
+    return(knnBackend)
+  }
+
+  if(knnWorkers > 1L){
+    if(requireNamespace("BiocNeighbors", quietly = TRUE) && requireNamespace("BiocParallel", quietly = TRUE)){
+      return("BiocNeighbors")
+    }
+
+    OverUnderWarn("'knnWorkers > 1' foi solicitado, mas BiocNeighbors/BiocParallel nao estao instalados; usando FNN sem paralelismo.")
+  }
+
+  "FNN"
+}
+
+#' Validar numero de workers KNN
+#' @noRd
+ValidateKnnWorkers <- function(knnWorkers){
+  if(!is.numeric(knnWorkers) || length(knnWorkers) != 1L || is.na(knnWorkers) || !is.finite(knnWorkers) || knnWorkers < 1L){
+    OverUnderAbort("'knnWorkers' deve ser inteiro positivo")
+  }
+
+  as.integer(knnWorkers)
+}
+
+#' Validar parametros do backend RcppHNSW
+#' @noRd
+ValidateHnswParams <- function(hnswM, hnswEf){
+  if(!is.numeric(hnswM) || length(hnswM) != 1L || is.na(hnswM) || !is.finite(hnswM) || hnswM < 2L){
+    OverUnderAbort("'hnswM' deve ser inteiro >= 2")
+  }
+  if(!is.numeric(hnswEf) || length(hnswEf) != 1L || is.na(hnswEf) || !is.finite(hnswEf) || hnswEf < 1L){
+    OverUnderAbort("'hnswEf' deve ser inteiro positivo")
+  }
+
+  list(hnswM = as.integer(hnswM), hnswEf = as.integer(hnswEf))
+}
+
+#' Criar parametro BiocParallel seguro para consultas KNN
+#' @noRd
+CreateKnnBiocParallelParam <- function(knnWorkers){
+  if(knnWorkers <= 1L){
+    return(BiocParallel::SerialParam())
+  }
+
+  if(.Platform$OS.type == "windows"){
+    BiocParallel::SnowParam(workers = knnWorkers, type = "SOCK")
+  } else {
+    BiocParallel::MulticoreParam(workers = knnWorkers)
+  }
+}
+
+#' Criar parametro BiocNeighbors para busca exata por padrao
+#' @noRd
+CreateBiocNeighborParam <- function(biocNeighborAlgorithm, predictorColumnCount){
+  if(identical(biocNeighborAlgorithm, "auto")){
+    biocNeighborAlgorithm <- if(predictorColumnCount > 15L) "Exhaustive" else "Kmknn"
+  }
+
+  switch(
+    biocNeighborAlgorithm,
+    Kmknn = BiocNeighbors::KmknnParam(),
+    Vptree = BiocNeighbors::VptreeParam(),
+    Exhaustive = BiocNeighbors::ExhaustiveParam(),
+    Annoy = BiocNeighbors::AnnoyParam(),
+    Hnsw = BiocNeighbors::HnswParam(),
+    OverUnderAbort("'biocNeighborAlgorithm' invalido")
+  )
+}
+
+#' Executar consulta KNN usando FNN ou BiocNeighbors/BiocParallel
+#' @noRd
+GetKnnx <- function(
+  data,
+  query,
+  k,
+  knnAlgorithm,
+  knnBackend,
+  knnWorkers,
+  biocNeighborAlgorithm,
+  hnswM,
+  hnswEf
+){
+  if(identical(knnBackend, "FNN")){
+    if(!requireNamespace("FNN", quietly = TRUE)){
+      OverUnderAbort("'knnBackend = FNN' requer o pacote FNN")
+    }
+
+    return(FNN::get.knnx(
+      data = data,
+      query = query,
+      k = k,
+      algorithm = knnAlgorithm
+    ))
+  }
+
+  if(identical(knnBackend, "RcppHNSW")){
+    if(!requireNamespace("RcppHNSW", quietly = TRUE)){
+      OverUnderAbort("'knnBackend = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW').")
+    }
+
+    effectiveEf <- min(max(as.integer(hnswEf), as.integer(k)), nrow(data))
+    hnswIndex <- RcppHNSW::hnsw_build(
+      X = data,
+      distance = "euclidean",
+      M = as.integer(hnswM),
+      ef = effectiveEf,
+      verbose = FALSE,
+      progress = "bar",
+      n_threads = knnWorkers,
+      byrow = TRUE
+    )
+    knnResult <- RcppHNSW::hnsw_search(
+      X = query,
+      ann = hnswIndex,
+      k = k,
+      ef = effectiveEf,
+      verbose = FALSE,
+      progress = "bar",
+      n_threads = knnWorkers,
+      byrow = TRUE
+    )
+
+    return(list(nn.index = knnResult$idx, nn.dist = knnResult$dist))
+  }
+
+  if(!requireNamespace("BiocNeighbors", quietly = TRUE) || !requireNamespace("BiocParallel", quietly = TRUE)){
+    OverUnderAbort("'knnBackend = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel')).")
+  }
+
+  neighborParam <- CreateBiocNeighborParam(biocNeighborAlgorithm, NCOL(data))
+  parallelParam <- CreateKnnBiocParallelParam(knnWorkers)
+  knnResult <- BiocNeighbors::queryKNN(
+    X = data,
+    query = query,
+    k = k,
+    BNPARAM = neighborParam,
+    BPPARAM = parallelParam
+  )
+
+  list(nn.index = knnResult$index, nn.dist = knnResult$distance)
 }
 
 #' Validar entradas de sampling
@@ -46,23 +239,23 @@ ValidateSamplingInputs <- function(
   OverUnderLoadPackages()
 
   if(!is.data.frame(predictorData) && !is.matrix(predictorData)){
-    stop("'predictorData' deve ser data.frame ou matrix", call. = FALSE)
+    OverUnderAbort("'predictorData' deve ser data.frame ou matrix")
   }
 
   if(NROW(predictorData) == 0L){
-    stop("'predictorData' deve conter ao menos uma linha", call. = FALSE)
+    OverUnderAbort("'predictorData' deve conter ao menos uma linha")
   }
 
   if(length(targetVector) != NROW(predictorData)){
-    stop("'targetVector' deve ter o mesmo numero de linhas de 'predictorData'", call. = FALSE)
+    OverUnderAbort("'targetVector' deve ter o mesmo numero de linhas de 'predictorData'")
   }
 
   if(anyNA(predictorData)){
-    stop("'predictorData' nao pode conter NA", call. = FALSE)
+    OverUnderAbort("'predictorData' nao pode conter NA")
   }
 
   if(anyNA(targetVector)){
-    stop("'targetVector' nao pode conter NA", call. = FALSE)
+    OverUnderAbort("'targetVector' nao pode conter NA")
   }
 
   xCheck <- if(is.matrix(predictorData)) predictorData else predictorData
@@ -73,21 +266,21 @@ ValidateSamplingInputs <- function(
   }
 
   if(!all(isNumericColumn)){
-    stop("Todos os preditores devem ser numericos", call. = FALSE)
+    OverUnderAbort("Todos os preditores devem ser numericos")
   }
 
   targetFactor <- as.factor(targetVector)
   if(nlevels(targetFactor) != 2L){
-    stop("'targetVector' deve ser binario", call. = FALSE)
+    OverUnderAbort("'targetVector' deve ser binario")
   }
 
   classCounts <- table(targetFactor)
   if(any(classCounts < 2L)){
-    stop("Cada classe deve ter ao menos 2 observacoes", call. = FALSE)
+    OverUnderAbort("Cada classe deve ter ao menos 2 observacoes")
   }
 
   if(!is.numeric(seed) || length(seed) != 1L || is.na(seed) || !is.finite(seed)){
-    stop("'seed' deve ser escalar numerico", call. = FALSE)
+    OverUnderAbort("'seed' deve ser escalar numerico")
   }
 
   invisible(TRUE)
@@ -109,10 +302,10 @@ OverUnderGetColumnNames <- function(predictorData){
 GetBinaryClassRoles <- function(targetFactor){
   classCounts <- table(targetFactor)
   if(length(classCounts) != 2L){
-    stop("'targetVector' deve ser binario", call. = FALSE)
+    OverUnderAbort("'targetVector' deve ser binario")
   }
   if(classCounts[[1L]] == classCounts[[2L]]){
-    stop("As rotinas de sampling requerem classes desbalanceadas", call. = FALSE)
+    OverUnderAbort("As rotinas de sampling requerem classes desbalanceadas")
   }
 
   list(
@@ -126,16 +319,16 @@ GetBinaryClassRoles <- function(targetFactor){
 #' @noRd
 ValidateScalingInfo <- function(scalingInfo, predictorColumnCount){
   if(!is.list(scalingInfo) || is.null(scalingInfo$centers) || is.null(scalingInfo$scales)){
-    stop("'precomputedScaling' deve conter 'centers' e 'scales'", call. = FALSE)
+    OverUnderAbort("'precomputedScaling' deve conter 'centers' e 'scales'")
   }
   if(length(scalingInfo$centers) != predictorColumnCount || length(scalingInfo$scales) != predictorColumnCount){
-    stop("'precomputedScaling' deve ter um centro e uma escala por coluna", call. = FALSE)
+    OverUnderAbort("'precomputedScaling' deve ter um centro e uma escala por coluna")
   }
   if(anyNA(scalingInfo$centers) || anyNA(scalingInfo$scales) || any(!is.finite(scalingInfo$centers)) || any(!is.finite(scalingInfo$scales))){
-    stop("'precomputedScaling' contem valores ausentes ou infinitos", call. = FALSE)
+    OverUnderAbort("'precomputedScaling' contem valores ausentes ou infinitos")
   }
   if(any(scalingInfo$scales <= 0)){
-    stop("'precomputedScaling$scales' deve conter apenas valores positivos", call. = FALSE)
+    OverUnderAbort("'precomputedScaling$scales' deve conter apenas valores positivos")
   }
   invisible(TRUE)
 }
@@ -183,27 +376,29 @@ InferNumericColumnTypes <- function(dataFrame){
 #' @noRd
 ComputeZScoreParams <- function(xMatrix){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
-  centers <- colMeans(xMatrix)
 
-  centered <- sweep(xMatrix, 2L, centers, FUN = "-")
-  scales <- sqrt(colSums(centered * centered) / (nrow(xMatrix) - 1L))
+  if(OverUnderNativeAvailable()){
+    params <- .Call("OU_ComputeZScoreParamsC", xMatrix, PACKAGE = "instanceengineering")
+  } else {
+    params <- list(
+      centers = Rfast::colmeans(xMatrix),
+      scales = Rfast::colVars(xMatrix, std = TRUE)
+    )
+  }
 
-  invalid <- is.na(scales) | !is.finite(scales) | scales <= 0
+  invalid <- is.na(params$scales) | !is.finite(params$scales) | params$scales <= 0
   if(any(invalid)){
     columnNames <- colnames(xMatrix)
     if(is.null(columnNames)){
       columnNames <- paste0("V", seq_len(NCOL(xMatrix)))
     }
-    stop(
-      paste0(
-        "Colunas com desvio padrao zero ou indefinido: ",
-        paste(columnNames[invalid], collapse = ", ")
-      ),
-      call. = FALSE
-    )
+    OverUnderAbort(paste0(
+      "Colunas com desvio padrao zero ou indefinido: ",
+      paste(columnNames[invalid], collapse = ", ")
+    ))
   }
 
-  list(centers = centers, scales = scales)
+  list(centers = as.numeric(params$centers), scales = as.numeric(params$scales))
 }
 
 #' Aplicar z-score em matrix double
@@ -211,9 +406,16 @@ ComputeZScoreParams <- function(xMatrix){
 ApplyZScoreScalingMatrix <- function(xMatrix, scalingInfo){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
   ValidateScalingInfo(scalingInfo, NCOL(xMatrix))
-  scaled <- sweep(xMatrix, 2L, scalingInfo$centers, FUN = "-")
-  scaled <- sweep(scaled, 2L, scalingInfo$scales, FUN = "/")
+
+  if(OverUnderNativeAvailable()){
+    scaled <- .Call("OU_ApplyZScoreC", xMatrix, as.numeric(scalingInfo$centers), as.numeric(scalingInfo$scales), FALSE, PACKAGE = "instanceengineering")
+  } else {
+    centered <- Rfast::eachrow(xMatrix, scalingInfo$centers, oper = "-")
+    scaled <- Rfast::eachrow(centered, scalingInfo$scales, oper = "/")
+  }
+
   storage.mode(scaled) <- "double"
+  colnames(scaled) <- colnames(xMatrix)
   scaled
 }
 
@@ -222,9 +424,16 @@ ApplyZScoreScalingMatrix <- function(xMatrix, scalingInfo){
 RevertZScoreScalingMatrix <- function(xMatrix, scalingInfo){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
   ValidateScalingInfo(scalingInfo, NCOL(xMatrix))
-  restored <- sweep(xMatrix, 2L, scalingInfo$scales, FUN = "*")
-  restored <- sweep(restored, 2L, scalingInfo$centers, FUN = "+")
+
+  if(OverUnderNativeAvailable()){
+    restored <- .Call("OU_ApplyZScoreC", xMatrix, as.numeric(scalingInfo$centers), as.numeric(scalingInfo$scales), TRUE, PACKAGE = "instanceengineering")
+  } else {
+    unscaled <- Rfast::eachrow(xMatrix, scalingInfo$scales, oper = "*")
+    restored <- Rfast::eachrow(unscaled, scalingInfo$centers, oper = "+")
+  }
+
   storage.mode(restored) <- "double"
+  colnames(restored) <- colnames(xMatrix)
   restored
 }
 
@@ -233,7 +442,7 @@ RevertZScoreScalingMatrix <- function(xMatrix, scalingInfo){
 RestoreNumericColumnTypes <- function(xMatrix, typeInfo, asDataFrame = TRUE){
   xMatrix <- OverUnderAsNumericMatrix(xMatrix)
   if(NCOL(xMatrix) != nrow(typeInfo)){
-    stop("Inconsistencia entre numero de colunas e typeInfo", call. = FALSE)
+    OverUnderAbort("Inconsistencia entre numero de colunas e typeInfo")
   }
 
   for(j in seq_len(NCOL(xMatrix))){
@@ -268,7 +477,7 @@ RestoreNumericColumnTypes <- function(xMatrix, typeInfo, asDataFrame = TRUE){
 #' @noRd
 ComputeMinorityExpansionCount <- function(targetFactor, overRatio){
   if(!is.numeric(overRatio) || length(overRatio) != 1L || is.na(overRatio) || overRatio < 0){
-    stop("'overRatio' deve ser escalar numerico nao negativo", call. = FALSE)
+    OverUnderAbort("'overRatio' deve ser escalar numerico nao negativo")
   }
 
   classRoles <- GetBinaryClassRoles(targetFactor)
@@ -276,7 +485,7 @@ ComputeMinorityExpansionCount <- function(targetFactor, overRatio){
   syntheticCount <- floor(minorityCount * overRatio)
 
   if(syntheticCount < 1L){
-    stop("'overRatio' gerou zero linhas sinteticas", call. = FALSE)
+    OverUnderAbort("'overRatio' gerou zero linhas sinteticas")
   }
 
   syntheticCount
@@ -286,7 +495,7 @@ ComputeMinorityExpansionCount <- function(targetFactor, overRatio){
 #' @noRd
 ComputeMajorityRetentionCount <- function(targetFactor, underRatio){
   if(!is.numeric(underRatio) || length(underRatio) != 1L || is.na(underRatio) || underRatio <= 0 || underRatio > 1){
-    stop("'underRatio' deve estar no intervalo (0, 1]", call. = FALSE)
+    OverUnderAbort("'underRatio' deve estar no intervalo (0, 1]")
   }
 
   classRoles <- GetBinaryClassRoles(targetFactor)
@@ -294,30 +503,51 @@ ComputeMajorityRetentionCount <- function(targetFactor, underRatio){
   retainedCount <- floor(majorityCount * underRatio)
 
   if(retainedCount < 1L){
-    stop("'underRatio' reteve zero linhas", call. = FALSE)
+    OverUnderAbort("'underRatio' reteve zero linhas")
   }
 
   retainedCount
 }
 
+#' Remover o proprio ponto de uma matriz de vizinhos de forma robusta
+#' @noRd
+DropSelfNeighborIndex <- function(neighborIndex, selfIndex, desiredK){
+  out <- matrix(NA_integer_, nrow = nrow(neighborIndex), ncol = desiredK)
+  for(i in seq_len(nrow(neighborIndex))){
+    candidates <- neighborIndex[i, ]
+    candidates <- candidates[!is.na(candidates) & candidates != selfIndex[[i]]]
+    if(length(candidates) < desiredK){
+      OverUnderAbort("Nao foi possivel remover o proprio ponto mantendo vizinhos suficientes")
+    }
+    out[i, ] <- candidates[seq_len(desiredK)]
+  }
+  out
+}
+
 #' Gerar amostras sinteticas ADASYN em matriz ja escalada
 #' @noRd
-GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, knnAlgorithm){
+GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, knnAlgorithm, knnBackend, knnWorkers, biocNeighborAlgorithm, hnswM, hnswEf){
   classRoles <- GetBinaryClassRoles(targetFactor)
   minorityIndex <- which(targetFactor == classRoles$minorityLabel)
   minorityMatrix <- xScaled[minorityIndex, , drop = FALSE]
 
   effectiveAllK <- min(as.integer(kOver) + 1L, nrow(xScaled))
-  allNeighborResult <- FNN::get.knnx(
+  allNeighborResult <- GetKnnx(
     data = xScaled,
     query = minorityMatrix,
     k = effectiveAllK,
-    algorithm = knnAlgorithm
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf
   )
 
   neighborIndex <- allNeighborResult$nn.index
+  desiredAllK <- min(as.integer(kOver), nrow(xScaled) - 1L)
   if(effectiveAllK > 1L){
-    neighborIndex <- neighborIndex[, -1L, drop = FALSE]
+    neighborIndex <- DropSelfNeighborIndex(neighborIndex, minorityIndex, desiredAllK)
   }
   majorityMask <- targetFactor[as.vector(neighborIndex)] == classRoles$majorityLabel
   majorityRatio <- rowMeans(matrix(majorityMask, nrow = nrow(neighborIndex), ncol = ncol(neighborIndex)))
@@ -336,27 +566,46 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
   }
 
   effectiveMinorityK <- min(as.integer(kOver) + 1L, nrow(minorityMatrix))
-  minorityNeighborResult <- FNN::get.knnx(
+  minorityNeighborResult <- GetKnnx(
     data = minorityMatrix,
     query = minorityMatrix,
     k = effectiveMinorityK,
-    algorithm = knnAlgorithm
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf
   )
   minorityNeighborIndex <- minorityNeighborResult$nn.index
+  desiredMinorityK <- min(as.integer(kOver), nrow(minorityMatrix) - 1L)
   if(effectiveMinorityK > 1L){
-    minorityNeighborIndex <- minorityNeighborIndex[, -1L, drop = FALSE]
+    minorityNeighborIndex <- DropSelfNeighborIndex(minorityNeighborIndex, seq_len(nrow(minorityMatrix)), desiredMinorityK)
   }
 
-  syntheticMatrix <- matrix(0, nrow = syntheticCount, ncol = NCOL(xScaled))
-  writeStart <- 1L
-  for(i in which(syntheticPerRow > 0L)){
-    rowCount <- syntheticPerRow[[i]]
-    writeEnd <- writeStart + rowCount - 1L
-    baseRows <- matrix(minorityMatrix[i, ], nrow = rowCount, ncol = NCOL(xScaled), byrow = TRUE)
-    selectedNeighborRows <- minorityNeighborIndex[i, sample.int(ncol(minorityNeighborIndex), rowCount, replace = TRUE)]
-    neighborRows <- minorityMatrix[selectedNeighborRows, , drop = FALSE]
-    syntheticMatrix[writeStart:writeEnd, ] <- baseRows + stats::runif(rowCount) * (neighborRows - baseRows)
-    writeStart <- writeEnd + 1L
+  if(OverUnderNativeAvailable()){
+    storage.mode(minorityMatrix) <- "double"
+    storage.mode(minorityNeighborIndex) <- "integer"
+    syntheticMatrix <- .Call(
+      "OU_GenerateSyntheticAdasynC",
+      minorityMatrix,
+      minorityNeighborIndex,
+      as.integer(syntheticPerRow),
+      PACKAGE = "instanceengineering"
+    )
+  } else {
+    syntheticMatrix <- matrix(0, nrow = syntheticCount, ncol = NCOL(xScaled))
+    writeStart <- 1L
+    positiveRows <- which(syntheticPerRow > 0L)
+    for(i in positiveRows){
+      rowCount <- syntheticPerRow[[i]]
+      writeEnd <- writeStart + rowCount - 1L
+      baseRows <- matrix(minorityMatrix[i, ], nrow = rowCount, ncol = NCOL(xScaled), byrow = TRUE)
+      selectedNeighborRows <- minorityNeighborIndex[i, sample.int(ncol(minorityNeighborIndex), rowCount, replace = TRUE)]
+      neighborRows <- minorityMatrix[selectedNeighborRows, , drop = FALSE]
+      syntheticMatrix[writeStart:writeEnd, ] <- baseRows + stats::runif(rowCount) * (neighborRows - baseRows)
+      writeStart <- writeEnd + 1L
+    }
   }
   colnames(syntheticMatrix) <- colnames(xScaled)
 
@@ -376,7 +625,12 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
 #' @param returnScaled logical; retorna tambem matriz escalada
 #' @param restoreTypes logical; restaura tipos ao final
 #' @param output formato de saida: "data.frame" ou "matrix"
-#' @param knnAlgorithm algoritmo para FNN::get.knnx
+#' @param knnAlgorithm algoritmo para FNN::get.knnx quando knnBackend = "FNN"
+#' @param knnBackend backend KNN: "FNN", "BiocNeighbors", "RcppHNSW" ou "auto"
+#' @param knnWorkers numero de workers para BiocNeighbors/BiocParallel ou RcppHNSW
+#' @param biocNeighborAlgorithm algoritmo BiocNeighbors
+#' @param hnswM conectividade do indice RcppHNSW
+#' @param hnswEf tamanho da lista dinamica de construcao/busca RcppHNSW
 #' @export
 ApplyAdasynOversampling <- function(
   predictorData,
@@ -387,18 +641,31 @@ ApplyAdasynOversampling <- function(
   returnScaled = FALSE,
   restoreTypes = TRUE,
   output = c("data.frame", "matrix"),
-  knnAlgorithm = c("cover_tree", "kd_tree", "brute")
+  knnAlgorithm = c("auto", "cover_tree", "kd_tree", "brute"),
+  knnBackend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  knnWorkers = 1L,
+  biocNeighborAlgorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  hnswM = 16L,
+  hnswEf = 200L
 ){
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
+  knnBackend <- match.arg(knnBackend)
+  biocNeighborAlgorithm <- match.arg(biocNeighborAlgorithm)
+  knnWorkers <- ValidateKnnWorkers(knnWorkers)
+  hnswParams <- ValidateHnswParams(hnswM, hnswEf)
+  hnswM <- hnswParams$hnswM
+  hnswEf <- hnswParams$hnswEf
   ValidateSamplingInputs(predictorData, targetVector, seed)
 
   if(!is.numeric(kOver) || length(kOver) != 1L || is.na(kOver) || kOver < 1L){
-    stop("'kOver' deve ser inteiro positivo", call. = FALSE)
+    OverUnderAbort("'kOver' deve ser inteiro positivo")
   }
 
   xMatrix <- OverUnderAsNumericMatrix(predictorData)
   colnames(xMatrix) <- OverUnderGetColumnNames(predictorData)
+  knnAlgorithm <- ResolveKnnAlgorithm(knnAlgorithm, NCOL(xMatrix))
+  knnBackend <- ResolveKnnBackend(knnBackend, knnWorkers)
   targetFactor <- as.factor(targetVector)
   typeInfo <- InferNumericColumnTypes(predictorData)
   scalingInfo <- ComputeZScoreParams(xMatrix)
@@ -411,7 +678,12 @@ ApplyAdasynOversampling <- function(
     targetFactor = targetFactor,
     syntheticCount = syntheticCount,
     kOver = kOver,
-    knnAlgorithm = knnAlgorithm
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf
   )
   colnames(adasynResult$x) <- colnames(xMatrix)
 
@@ -437,6 +709,11 @@ ApplyAdasynOversampling <- function(
     inputRows = NROW(xMatrix),
     outputRows = if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x),
     generatedRows = (if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x)) - nrow(xMatrix),
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = if(identical(knnBackend, "BiocNeighbors")) biocNeighborAlgorithm else NA_character_,
+    hnswM = if(identical(knnBackend, "RcppHNSW")) hnswM else NA_integer_,
+    hnswEf = if(identical(knnBackend, "RcppHNSW")) hnswEf else NA_integer_,
     inputClassDistribution = table(targetFactor),
     outputClassDistribution = table(as.factor(adasynResult$y))
   )
@@ -470,7 +747,12 @@ ApplyAdasynOversampling <- function(
 #' @param restoreTypes logical; restaura tipos ao final
 #' @param typeInfo informacao opcional de tipos original
 #' @param output formato de saida: "data.frame" ou "matrix"
-#' @param knnAlgorithm algoritmo para FNN::get.knnx
+#' @param knnAlgorithm algoritmo para FNN::get.knnx quando knnBackend = "FNN"
+#' @param knnBackend backend KNN: "FNN", "BiocNeighbors", "RcppHNSW" ou "auto"
+#' @param knnWorkers numero de workers para BiocNeighbors/BiocParallel ou RcppHNSW
+#' @param biocNeighborAlgorithm algoritmo BiocNeighbors
+#' @param hnswM conectividade do indice RcppHNSW
+#' @param hnswEf tamanho da lista dinamica de construcao/busca RcppHNSW
 #' @export
 ApplyNearmissUndersampling <- function(
   predictorData,
@@ -483,27 +765,40 @@ ApplyNearmissUndersampling <- function(
   restoreTypes = TRUE,
   typeInfo = NULL,
   output = c("data.frame", "matrix"),
-  knnAlgorithm = c("cover_tree", "kd_tree", "brute")
+  knnAlgorithm = c("auto", "cover_tree", "kd_tree", "brute"),
+  knnBackend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  knnWorkers = 1L,
+  biocNeighborAlgorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  hnswM = 16L,
+  hnswEf = 200L
 ){
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
+  knnBackend <- match.arg(knnBackend)
+  biocNeighborAlgorithm <- match.arg(biocNeighborAlgorithm)
+  knnWorkers <- ValidateKnnWorkers(knnWorkers)
+  hnswParams <- ValidateHnswParams(hnswM, hnswEf)
+  hnswM <- hnswParams$hnswM
+  hnswEf <- hnswParams$hnswEf
   ValidateSamplingInputs(predictorData, targetVector, seed)
 
   if(!is.numeric(kUnder) || length(kUnder) != 1L || is.na(kUnder) || kUnder < 1L){
-    stop("'kUnder' deve ser inteiro positivo", call. = FALSE)
+    OverUnderAbort("'kUnder' deve ser inteiro positivo")
   }
 
   xMatrix <- OverUnderAsNumericMatrix(predictorData)
   colnames(xMatrix) <- OverUnderGetColumnNames(predictorData)
+  knnAlgorithm <- ResolveKnnAlgorithm(knnAlgorithm, NCOL(xMatrix))
+  knnBackend <- ResolveKnnBackend(knnBackend, knnWorkers)
   targetFactor <- as.factor(targetVector)
   typeInfo <- if(is.null(typeInfo)) InferNumericColumnTypes(predictorData) else typeInfo
   if(NCOL(xMatrix) != nrow(typeInfo)){
-    stop("'typeInfo' deve ter uma linha por coluna de 'predictorData'", call. = FALSE)
+    OverUnderAbort("'typeInfo' deve ter uma linha por coluna de 'predictorData'")
   }
 
   scalingInfo <- if(isTRUE(inputAlreadyScaled)) {
     if(is.null(precomputedScaling)){
-      stop("'precomputedScaling' e obrigatorio quando 'inputAlreadyScaled = TRUE'", call. = FALSE)
+      OverUnderAbort("'precomputedScaling' e obrigatorio quando 'inputAlreadyScaled = TRUE'")
     }
     precomputedScaling
   } else if(is.null(precomputedScaling)) {
@@ -531,15 +826,20 @@ ApplyNearmissUndersampling <- function(
     retainedMajorityCount <- ComputeMajorityRetentionCount(targetFactor, underRatio)
     effectiveK <- min(as.integer(kUnder), nrow(minorityMatrix))
     if(effectiveK < 1L){
-      stop("Sem linhas minoritarias suficientes para NearMiss", call. = FALSE)
+      OverUnderAbort("Sem linhas minoritarias suficientes para NearMiss")
     }
 
     set.seed(seed)
-    knnResult <- FNN::get.knnx(
+    knnResult <- GetKnnx(
       data = minorityMatrix,
       query = majorityMatrix,
       k = effectiveK,
-      algorithm = knnAlgorithm
+      knnAlgorithm = knnAlgorithm,
+      knnBackend = knnBackend,
+      knnWorkers = knnWorkers,
+      biocNeighborAlgorithm = biocNeighborAlgorithm,
+      hnswM = hnswM,
+      hnswEf = hnswEf
     )
 
     meanDistances <- rowMeans(knnResult$nn.dist)
@@ -572,6 +872,11 @@ ApplyNearmissUndersampling <- function(
     inputRows = nrow(xMatrix),
     outputRows = if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x),
     removedRows = nrow(xMatrix) - (if(identical(output, "data.frame")) nrow(balancedData) else nrow(balancedData$x)),
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = if(identical(knnBackend, "BiocNeighbors")) biocNeighborAlgorithm else NA_character_,
+    hnswM = if(identical(knnBackend, "RcppHNSW")) hnswM else NA_integer_,
+    hnswEf = if(identical(knnBackend, "RcppHNSW")) hnswEf else NA_integer_,
     inputClassDistribution = table(targetFactor),
     outputClassDistribution = table(as.factor(reducedTarget))
   )
@@ -596,7 +901,12 @@ ApplyNearmissUndersampling <- function(
 #' @param seed semente
 #' @param restoreTypes logical; restaura tipos na saida final
 #' @param output formato final
-#' @param knnAlgorithm algoritmo FNN
+#' @param knnAlgorithm algoritmo para FNN::get.knnx quando knnBackend = "FNN"
+#' @param knnBackend backend KNN: "FNN", "BiocNeighbors", "RcppHNSW" ou "auto"
+#' @param knnWorkers numero de workers para BiocNeighbors/BiocParallel ou RcppHNSW
+#' @param biocNeighborAlgorithm algoritmo BiocNeighbors
+#' @param hnswM conectividade do indice RcppHNSW
+#' @param hnswEf tamanho da lista dinamica de construcao/busca RcppHNSW
 #' @export
 OverUnderSampling <- function(
   predictorData,
@@ -608,10 +918,23 @@ OverUnderSampling <- function(
   seed = 42L,
   restoreTypes = TRUE,
   output = c("data.frame", "matrix"),
-  knnAlgorithm = c("cover_tree", "kd_tree", "brute")
+  knnAlgorithm = c("auto", "cover_tree", "kd_tree", "brute"),
+  knnBackend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  knnWorkers = 1L,
+  biocNeighborAlgorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  hnswM = 16L,
+  hnswEf = 200L
 ){
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
+  knnBackend <- match.arg(knnBackend)
+  biocNeighborAlgorithm <- match.arg(biocNeighborAlgorithm)
+  knnWorkers <- ValidateKnnWorkers(knnWorkers)
+  hnswParams <- ValidateHnswParams(hnswM, hnswEf)
+  hnswM <- hnswParams$hnswM
+  hnswEf <- hnswParams$hnswEf
+  knnAlgorithm <- ResolveKnnAlgorithm(knnAlgorithm, NCOL(predictorData))
+  knnBackend <- ResolveKnnBackend(knnBackend, knnWorkers)
 
   overResult <- ApplyAdasynOversampling(
     predictorData = predictorData,
@@ -622,7 +945,12 @@ OverUnderSampling <- function(
     returnScaled = TRUE,
     restoreTypes = FALSE,
     output = "matrix",
-    knnAlgorithm = knnAlgorithm
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf
   )
 
   underResult <- ApplyNearmissUndersampling(
@@ -636,13 +964,23 @@ OverUnderSampling <- function(
     restoreTypes = restoreTypes,
     typeInfo = overResult$typeInfo,
     output = output,
-    knnAlgorithm = knnAlgorithm
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf
   )
 
   diagnostics <- list(
     originalRows = NROW(predictorData),
     afterOversamplingRows = nrow(overResult$balancedScaled$x),
     finalRows = if(identical(output, "data.frame")) nrow(underResult$balancedData) else nrow(underResult$balancedData$x),
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = if(identical(knnBackend, "BiocNeighbors")) biocNeighborAlgorithm else NA_character_,
+    hnswM = if(identical(knnBackend, "RcppHNSW")) hnswM else NA_integer_,
+    hnswEf = if(identical(knnBackend, "RcppHNSW")) hnswEf else NA_integer_,
     originalClassDistribution = table(as.factor(targetVector)),
     afterOversamplingClassDistribution = table(overResult$balancedScaled$y),
     finalClassDistribution = table(if(identical(output, "data.frame")) underResult$balancedData$TARGET else underResult$balancedData$y)

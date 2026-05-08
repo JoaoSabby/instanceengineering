@@ -1,0 +1,25 @@
+Package: instanceengineering
+Type: Package
+Title: High-Performance Binary Over/Under Sampling
+Version: 0.1.0
+Authors@R: person("Joao", "B. G. de Brito", email = "joaosabby@users.noreply.github.com", role = c("aut", "cre"))
+Description: Provides high-performance binary over- and under-sampling routines
+    using ADASYN and NearMiss-1. The implementation uses numeric matrices,
+    optional native C kernels, Rfast fallbacks, and configurable nearest-neighbor
+    backends for exact or approximate searches.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.0.0)
+Imports:
+    cli,
+    FNN,
+    Rfast
+Suggests:
+    BiocManager,
+    BiocNeighbors,
+    BiocParallel,
+    modeldata,
+    RcppHNSW
