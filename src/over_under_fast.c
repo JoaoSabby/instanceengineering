@@ -2,6 +2,12 @@
 #include <Rinternals.h>
 #include <Rmath.h>
 #include <R_ext/Rdynload.h>
+#include <R_ext/Utils.h>
+
+SEXP OU_CheckUserInterruptC(void) {
+  R_CheckUserInterrupt();
+  return R_NilValue;
+}
 
 static void require_real_matrix(SEXP x, const char *name) {
   if (!isReal(x) || !isMatrix(x)) {
@@ -25,6 +31,9 @@ SEXP OU_ComputeZScoreParamsC(SEXP xMatrix) {
   double *sd = REAL(scales);
 
   for (int j = 0; j < p; ++j) {
+    if ((j & 15) == 0) {
+      R_CheckUserInterrupt();
+    }
     const double *col = x + ((R_xlen_t) j * n);
     long double sum = 0.0L;
     for (int i = 0; i < n; ++i) {
@@ -75,6 +84,9 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse) {
   const int do_reverse = asLogical(reverse);
 
   for (int j = 0; j < p; ++j) {
+    if ((j & 15) == 0) {
+      R_CheckUserInterrupt();
+    }
     const R_xlen_t offset = (R_xlen_t) j * n;
     const double center = mu[j];
     const double scale = sd[j];
@@ -123,6 +135,9 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
 
   R_xlen_t totalSynthetic = 0;
   for (int i = 0; i < minorityRows; ++i) {
+    if ((i & 8191) == 0) {
+      R_CheckUserInterrupt();
+    }
     if (perRow[i] < 0) {
       error("'syntheticPerRow' nao pode conter valores negativos");
     }
@@ -138,6 +153,11 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
   GetRNGstate();
   int writeRow = 0;
   for (int i = 0; i < minorityRows; ++i) {
+    if ((i & 255) == 0 && i > 0) {
+      PutRNGstate();
+      R_CheckUserInterrupt();
+      GetRNGstate();
+    }
     const int rowCount = perRow[i];
     for (int r = 0; r < rowCount; ++r) {
       int sampledNeighborColumn = (int) floor(unif_rand() * (double) neighborCount);
@@ -158,6 +178,11 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
         synthetic[writeRow + ((R_xlen_t) j * totalSynthetic)] = baseValue + weight * (neighborValue - baseValue);
       }
       ++writeRow;
+      if ((writeRow & 4095) == 0) {
+        PutRNGstate();
+        R_CheckUserInterrupt();
+        GetRNGstate();
+      }
     }
   }
   PutRNGstate();
@@ -167,6 +192,7 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
 }
 
 static const R_CallMethodDef CallEntries[] = {
+  {"OU_CheckUserInterruptC", (DL_FUNC) &OU_CheckUserInterruptC, 0},
   {"OU_ComputeZScoreParamsC", (DL_FUNC) &OU_ComputeZScoreParamsC, 1},
   {"OU_ApplyZScoreC", (DL_FUNC) &OU_ApplyZScoreC, 4},
   {"OU_GenerateSyntheticAdasynC", (DL_FUNC) &OU_GenerateSyntheticAdasynC, 3},

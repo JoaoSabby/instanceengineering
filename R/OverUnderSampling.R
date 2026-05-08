@@ -69,6 +69,18 @@ OverUnderNativeAvailable <- function(){
   is.loaded("OU_GenerateSyntheticAdasynC", PACKAGE = "instanceengineering")
 }
 
+#' Verificar interrupcao solicitada pelo usuario
+#' @noRd
+OverUnderCheckUserInterrupt <- function(){
+  if(OverUnderNativeAvailable()){
+    .Call("OU_CheckUserInterruptC", PACKAGE = "instanceengineering")
+  } else {
+    Sys.sleep(0)
+  }
+
+  invisible(TRUE)
+}
+
 #' Resolver algoritmo KNN automatico quando solicitado
 #' @noRd
 ResolveKnnAlgorithm <- function(knnAlgorithm, predictorColumnCount){
@@ -169,17 +181,22 @@ GetKnnx <- function(
   hnswM,
   hnswEf
 ){
+  OverUnderCheckUserInterrupt()
+
   if(identical(knnBackend, "FNN")){
     if(!requireNamespace("FNN", quietly = TRUE)){
       OverUnderAbort("'knnBackend = FNN' requer o pacote FNN")
     }
 
-    return(FNN::get.knnx(
+    knnResult <- FNN::get.knnx(
       data = data,
       query = query,
       k = k,
       algorithm = knnAlgorithm
-    ))
+    )
+    OverUnderCheckUserInterrupt()
+
+    return(knnResult)
   }
 
   if(identical(knnBackend, "RcppHNSW")){
@@ -209,6 +226,8 @@ GetKnnx <- function(
       byrow = TRUE
     )
 
+    OverUnderCheckUserInterrupt()
+
     return(list(nn.index = knnResult$idx, nn.dist = knnResult$dist))
   }
 
@@ -225,6 +244,8 @@ GetKnnx <- function(
     BNPARAM = neighborParam,
     BPPARAM = parallelParam
   )
+
+  OverUnderCheckUserInterrupt()
 
   list(nn.index = knnResult$index, nn.dist = knnResult$distance)
 }
@@ -543,6 +564,7 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
     hnswM = hnswM,
     hnswEf = hnswEf
   )
+  OverUnderCheckUserInterrupt()
 
   neighborIndex <- allNeighborResult$nn.index
   desiredAllK <- min(as.integer(kOver), nrow(xScaled) - 1L)
@@ -577,6 +599,8 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
     hnswM = hnswM,
     hnswEf = hnswEf
   )
+  OverUnderCheckUserInterrupt()
+
   minorityNeighborIndex <- minorityNeighborResult$nn.index
   desiredMinorityK <- min(as.integer(kOver), nrow(minorityMatrix) - 1L)
   if(effectiveMinorityK > 1L){
@@ -593,11 +617,13 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
       as.integer(syntheticPerRow),
       PACKAGE = "instanceengineering"
     )
+    OverUnderCheckUserInterrupt()
   } else {
     syntheticMatrix <- matrix(0, nrow = syntheticCount, ncol = NCOL(xScaled))
     writeStart <- 1L
     positiveRows <- which(syntheticPerRow > 0L)
     for(i in positiveRows){
+      OverUnderCheckUserInterrupt()
       rowCount <- syntheticPerRow[[i]]
       writeEnd <- writeStart + rowCount - 1L
       baseRows <- matrix(minorityMatrix[i, ], nrow = rowCount, ncol = NCOL(xScaled), byrow = TRUE)
@@ -648,6 +674,8 @@ ApplyAdasynOversampling <- function(
   hnswM = 16L,
   hnswEf = 200L
 ){
+  OverUnderCheckUserInterrupt()
+
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
   knnBackend <- match.arg(knnBackend)
@@ -670,6 +698,8 @@ ApplyAdasynOversampling <- function(
   typeInfo <- InferNumericColumnTypes(predictorData)
   scalingInfo <- ComputeZScoreParams(xMatrix)
   xScaled <- ApplyZScoreScalingMatrix(xMatrix, scalingInfo)
+  OverUnderCheckUserInterrupt()
+
   syntheticCount <- ComputeMinorityExpansionCount(targetFactor, overRatio)
 
   set.seed(seed)
@@ -685,9 +715,12 @@ ApplyAdasynOversampling <- function(
     hnswM = hnswM,
     hnswEf = hnswEf
   )
+  OverUnderCheckUserInterrupt()
+
   colnames(adasynResult$x) <- colnames(xMatrix)
 
   xRestored <- RevertZScoreScalingMatrix(adasynResult$x, scalingInfo)
+  OverUnderCheckUserInterrupt()
 
   finalPredictors <- if(restoreTypes) {
     RestoreNumericColumnTypes(xRestored, typeInfo, asDataFrame = identical(output, "data.frame"))
@@ -772,6 +805,8 @@ ApplyNearmissUndersampling <- function(
   hnswM = 16L,
   hnswEf = 200L
 ){
+  OverUnderCheckUserInterrupt()
+
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
   knnBackend <- match.arg(knnBackend)
@@ -809,6 +844,7 @@ ApplyNearmissUndersampling <- function(
   }
 
   xScaled <- if(isTRUE(inputAlreadyScaled)) xMatrix else ApplyZScoreScalingMatrix(xMatrix, scalingInfo)
+  OverUnderCheckUserInterrupt()
 
   classCounts <- table(targetFactor)
   if(classCounts[[1L]] == classCounts[[2L]]){
@@ -841,6 +877,7 @@ ApplyNearmissUndersampling <- function(
       hnswM = hnswM,
       hnswEf = hnswEf
     )
+    OverUnderCheckUserInterrupt()
 
     meanDistances <- rowMeans(knnResult$nn.dist)
     selectedOrder <- order(meanDistances, decreasing = FALSE)
@@ -925,6 +962,8 @@ OverUnderSampling <- function(
   hnswM = 16L,
   hnswEf = 200L
 ){
+  OverUnderCheckUserInterrupt()
+
   output <- match.arg(output)
   knnAlgorithm <- match.arg(knnAlgorithm)
   knnBackend <- match.arg(knnBackend)
@@ -952,6 +991,7 @@ OverUnderSampling <- function(
     hnswM = hnswM,
     hnswEf = hnswEf
   )
+  OverUnderCheckUserInterrupt()
 
   underResult <- ApplyNearmissUndersampling(
     predictorData = overResult$balancedScaled$x,
@@ -971,6 +1011,7 @@ OverUnderSampling <- function(
     hnswM = hnswM,
     hnswEf = hnswEf
   )
+  OverUnderCheckUserInterrupt()
 
   diagnostics <- list(
     originalRows = NROW(predictorData),
