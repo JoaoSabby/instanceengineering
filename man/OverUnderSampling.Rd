@@ -88,9 +88,11 @@ data-frame output appends a \code{TARGET} factor column.
 }
 \details{
 The package uses native C routines for scaling and ADASYN generation when the
-installed shared library is available. Otherwise it falls back to Rfast. The
-\code{RcppHNSW} backend is approximate and can change selected neighbors; use it
-only when that trade-off is acceptable.
+installed shared library is available. Otherwise it falls back to Rfast. Long
+loops periodically check for user interrupts, so running processes can be
+stopped with Ctrl+C in interactive R sessions. The \code{RcppHNSW} backend is
+approximate and can change selected neighbors; use it only when that trade-off
+is acceptable.
 }
 \examples{
 set.seed(1)

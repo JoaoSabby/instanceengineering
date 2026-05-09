@@ -16,6 +16,9 @@ Depends:
 Imports:
     cli,
     FNN,
+    generics,
+    recipes,
+    rlang,
     Rfast
 Suggests:
     BiocManager,

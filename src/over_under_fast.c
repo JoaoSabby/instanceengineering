@@ -37,6 +37,9 @@ SEXP OU_ComputeZScoreParamsC(SEXP xMatrix) {
     const double *col = x + ((R_xlen_t) j * n);
     long double sum = 0.0L;
     for (int i = 0; i < n; ++i) {
+      if ((i & 65535) == 0) {
+        R_CheckUserInterrupt();
+      }
       sum += (long double) col[i];
     }
     const long double mean = sum / (long double) n;
@@ -44,6 +47,9 @@ SEXP OU_ComputeZScoreParamsC(SEXP xMatrix) {
 
     long double ss = 0.0L;
     for (int i = 0; i < n; ++i) {
+      if ((i & 65535) == 0) {
+        R_CheckUserInterrupt();
+      }
       const long double centered = (long double) col[i] - mean;
       ss += centered * centered;
     }
@@ -92,10 +98,16 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse) {
     const double scale = sd[j];
     if (do_reverse) {
       for (int i = 0; i < n; ++i) {
+        if ((i & 65535) == 0) {
+          R_CheckUserInterrupt();
+        }
         y[offset + i] = x[offset + i] * scale + center;
       }
     } else {
       for (int i = 0; i < n; ++i) {
+        if ((i & 65535) == 0) {
+          R_CheckUserInterrupt();
+        }
         y[offset + i] = (x[offset + i] - center) / scale;
       }
     }
@@ -173,6 +185,11 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
 
       const double weight = unif_rand();
       for (int j = 0; j < colCount; ++j) {
+        if ((j & 1023) == 0 && j > 0) {
+          PutRNGstate();
+          R_CheckUserInterrupt();
+          GetRNGstate();
+        }
         const double baseValue = minority[i + ((R_xlen_t) j * minorityRows)];
         const double neighborValue = minority[selectedNeighborRow + ((R_xlen_t) j * minorityRows)];
         synthetic[writeRow + ((R_xlen_t) j * totalSynthetic)] = baseValue + weight * (neighborValue - baseValue);
