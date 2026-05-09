@@ -104,6 +104,18 @@ sby_audit$sby_diagnostics
 sby_audit$sby_balanced_data
 ```
 
+## Compilação byte-code das funções R
+
+O pacote define `ByteCompile: true` no `DESCRIPTION`. Durante `R CMD INSTALL`,
+o R usa o pacote base `compiler` para byte-compilar as funções R carregadas no
+namespace/lazy-load database do pacote. Assim, ao chamar `library(instanceengineering)`
+ou `require(instanceengineering)`, as funções R do pacote já são carregadas na
+forma byte-compilada quando a instalação respeita esse campo.
+
+Isso evita depender de `compiler::cmpfun()` na primeira execução da função em
+tempo de uso. O código C em `src/` continua sendo compilado separadamente como
+biblioteca nativa.
+
 ## Ambiente de desenvolvimento permanente
 
 O repositório inclui um `Dockerfile` e uma configuração `.devcontainer/` com R,

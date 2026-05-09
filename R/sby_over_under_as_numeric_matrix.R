@@ -8,7 +8,7 @@ sby_over_under_as_numeric_matrix <- function(sby_predictor_data){
     return(sby_x_matrix)
   }
 
-  sby_x_matrix <- sby_data.matrix(sby_predictor_data)
+  sby_x_matrix <- data.matrix(sby_predictor_data)
   storage.mode(sby_x_matrix) <- "double"
   sby_x_matrix
 }
