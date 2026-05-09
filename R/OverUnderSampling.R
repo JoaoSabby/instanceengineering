@@ -467,6 +467,9 @@ RestoreNumericColumnTypes <- function(xMatrix, typeInfo, asDataFrame = TRUE){
   }
 
   for(j in seq_len(NCOL(xMatrix))){
+    if(j %% 64L == 1L){
+      OverUnderCheckUserInterrupt()
+    }
     inferredType <- typeInfo$inferredType[[j]]
     if(identical(inferredType, "binary")){
       xMatrix[, j] <- ifelse(xMatrix[, j] >= 0.5, 1, 0)
@@ -483,6 +486,9 @@ RestoreNumericColumnTypes <- function(xMatrix, typeInfo, asDataFrame = TRUE){
   names(out) <- typeInfo$columnName
 
   for(j in seq_len(NCOL(xMatrix))){
+    if(j %% 64L == 1L){
+      OverUnderCheckUserInterrupt()
+    }
     inferredType <- typeInfo$inferredType[[j]]
     if(identical(inferredType, "binary") || identical(inferredType, "integer")){
       out[[j]] <- as.integer(out[[j]])
@@ -535,6 +541,9 @@ ComputeMajorityRetentionCount <- function(targetFactor, underRatio){
 DropSelfNeighborIndex <- function(neighborIndex, selfIndex, desiredK){
   out <- matrix(NA_integer_, nrow = nrow(neighborIndex), ncol = desiredK)
   for(i in seq_len(nrow(neighborIndex))){
+    if(i %% 1024L == 1L){
+      OverUnderCheckUserInterrupt()
+    }
     candidates <- neighborIndex[i, ]
     candidates <- candidates[!is.na(candidates) & candidates != selfIndex[[i]]]
     if(length(candidates) < desiredK){
@@ -572,7 +581,9 @@ GenerateAdasynSamples <- function(xScaled, targetFactor, syntheticCount, kOver, 
     neighborIndex <- DropSelfNeighborIndex(neighborIndex, minorityIndex, desiredAllK)
   }
   majorityMask <- targetFactor[as.vector(neighborIndex)] == classRoles$majorityLabel
+  OverUnderCheckUserInterrupt()
   majorityRatio <- rowMeans(matrix(majorityMask, nrow = nrow(neighborIndex), ncol = ncol(neighborIndex)))
+  OverUnderCheckUserInterrupt()
   if(sum(majorityRatio) <= 0){
     generationWeights <- rep.int(1 / length(minorityIndex), length(minorityIndex))
   } else {
@@ -879,7 +890,9 @@ ApplyNearmissUndersampling <- function(
     )
     OverUnderCheckUserInterrupt()
 
+    OverUnderCheckUserInterrupt()
     meanDistances <- rowMeans(knnResult$nn.dist)
+    OverUnderCheckUserInterrupt()
     selectedOrder <- order(meanDistances, decreasing = FALSE)
     selectedMajorityIndex <- majorityIndex[selectedOrder[seq_len(retainedMajorityCount)]]
     retainedIndex <- sort(c(minorityIndex, selectedMajorityIndex))
@@ -1033,4 +1046,222 @@ OverUnderSampling <- function(
     balancedData = underResult$balancedData,
     diagnostics = diagnostics
   )
+}
+
+#' Balancear dados em uma recipe com NearMiss-1
+#'
+#' @description
+#' `step_balance()` adiciona uma etapa de balanceamento para recipes/tidymodels.
+#' A etapa executa somente `ApplyNearmissUndersampling()` e, por padrao,
+#' e pulada em novos dados (`skip = TRUE`), pois altera o numero de linhas.
+#'
+#' @param recipe Objeto recipe.
+#' @param ... Seletores recipes/tidyselect que identificam uma unica coluna de
+#'   desfecho binario.
+#' @param role Role da etapa. Mantido por compatibilidade com recipes.
+#' @param trained Logical indicando se a etapa ja foi treinada.
+#' @param columns Coluna de desfecho selecionada durante `prep()`.
+#' @param underRatio Fracao da classe majoritaria retida pelo NearMiss-1.
+#' @param kUnder Numero de vizinhos usado pelo NearMiss-1.
+#' @param seed Semente usada pela rotina de undersampling.
+#' @param restoreTypes Logical; restaura tipos numericos inferidos ao final.
+#' @param knnAlgorithm Algoritmo para `FNN::get.knnx()` quando
+#'   `knnBackend = "FNN"`.
+#' @param knnBackend Backend KNN: `"FNN"`, `"BiocNeighbors"`, `"RcppHNSW"` ou
+#'   `"auto"`.
+#' @param knnWorkers Numero de workers para backends com suporte.
+#' @param biocNeighborAlgorithm Algoritmo BiocNeighbors.
+#' @param hnswM,hnswEf Parametros do indice RcppHNSW.
+#' @param skip Logical; a etapa deve ser pulada ao aplicar a recipe em novos
+#'   dados. O padrao e `TRUE`, como em outras etapas que mudam linhas.
+#' @param id Identificador unico da etapa.
+#' @return Um objeto recipe com a etapa adicionada.
+#' @export
+step_balance <- function(
+  recipe,
+  ...,
+  role = NA,
+  trained = FALSE,
+  columns = NULL,
+  underRatio = 0.5,
+  kUnder = 5L,
+  seed = 42L,
+  restoreTypes = TRUE,
+  knnAlgorithm = c("auto", "cover_tree", "kd_tree", "brute"),
+  knnBackend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  knnWorkers = 1L,
+  biocNeighborAlgorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  hnswM = 16L,
+  hnswEf = 200L,
+  skip = TRUE,
+  id = recipes::rand_id("balance")
+){
+  OverUnderCheckUserInterrupt()
+  recipes::recipes_pkg_check(required_pkgs.step_balance())
+
+  terms <- rlang::enquos(...)
+  knnAlgorithm <- match.arg(knnAlgorithm)
+  knnBackend <- match.arg(knnBackend)
+  biocNeighborAlgorithm <- match.arg(biocNeighborAlgorithm)
+  knnWorkers <- ValidateKnnWorkers(knnWorkers)
+  hnswParams <- ValidateHnswParams(hnswM, hnswEf)
+
+  recipes::add_step(
+    recipe,
+    step_balance_new(
+      terms = terms,
+      role = role,
+      trained = trained,
+      columns = columns,
+      underRatio = underRatio,
+      kUnder = kUnder,
+      seed = seed,
+      restoreTypes = restoreTypes,
+      knnAlgorithm = knnAlgorithm,
+      knnBackend = knnBackend,
+      knnWorkers = knnWorkers,
+      biocNeighborAlgorithm = biocNeighborAlgorithm,
+      hnswM = hnswParams$hnswM,
+      hnswEf = hnswParams$hnswEf,
+      skip = skip,
+      id = id
+    )
+  )
+}
+
+#' Construtor interno de step_balance
+#' @noRd
+step_balance_new <- function(
+  terms,
+  role,
+  trained,
+  columns,
+  underRatio,
+  kUnder,
+  seed,
+  restoreTypes,
+  knnAlgorithm,
+  knnBackend,
+  knnWorkers,
+  biocNeighborAlgorithm,
+  hnswM,
+  hnswEf,
+  skip,
+  id
+){
+  recipes::step(
+    subclass = "balance",
+    terms = terms,
+    role = role,
+    trained = trained,
+    columns = columns,
+    underRatio = underRatio,
+    kUnder = kUnder,
+    seed = seed,
+    restoreTypes = restoreTypes,
+    knnAlgorithm = knnAlgorithm,
+    knnBackend = knnBackend,
+    knnWorkers = knnWorkers,
+    biocNeighborAlgorithm = biocNeighborAlgorithm,
+    hnswM = hnswM,
+    hnswEf = hnswEf,
+    skip = skip,
+    id = id
+  )
+}
+
+#' @export
+prep.step_balance <- function(x, training, info = NULL, ...){
+  OverUnderCheckUserInterrupt()
+
+  selectedColumns <- recipes::recipes_eval_select(x$terms, training, info)
+  if(length(selectedColumns) != 1L){
+    OverUnderAbort("'step_balance()' deve selecionar exatamente uma coluna de desfecho")
+  }
+
+  step_balance_new(
+    terms = x$terms,
+    role = x$role,
+    trained = TRUE,
+    columns = names(selectedColumns),
+    underRatio = x$underRatio,
+    kUnder = x$kUnder,
+    seed = x$seed,
+    restoreTypes = x$restoreTypes,
+    knnAlgorithm = x$knnAlgorithm,
+    knnBackend = x$knnBackend,
+    knnWorkers = x$knnWorkers,
+    biocNeighborAlgorithm = x$biocNeighborAlgorithm,
+    hnswM = x$hnswM,
+    hnswEf = x$hnswEf,
+    skip = x$skip,
+    id = x$id
+  )
+}
+
+#' @export
+bake.step_balance <- function(object, new_data, ...){
+  OverUnderCheckUserInterrupt()
+
+  if(!isTRUE(object$trained)){
+    OverUnderAbort("'step_balance()' precisa ser treinado com prep() antes de bake()")
+  }
+
+  targetColumn <- object$columns[[1L]]
+  if(!targetColumn %in% names(new_data)){
+    OverUnderAbort(paste0("Coluna de desfecho nao encontrada em 'new_data': ", targetColumn))
+  }
+
+  originalNames <- names(new_data)
+  predictorNames <- setdiff(originalNames, targetColumn)
+  if(length(predictorNames) < 1L){
+    OverUnderAbort("'step_balance()' requer ao menos uma coluna preditora")
+  }
+
+  samplingResult <- ApplyNearmissUndersampling(
+    predictorData = as.data.frame(new_data[, predictorNames, drop = FALSE]),
+    targetVector = new_data[[targetColumn]],
+    underRatio = object$underRatio,
+    kUnder = object$kUnder,
+    seed = object$seed,
+    restoreTypes = object$restoreTypes,
+    output = "matrix",
+    knnAlgorithm = object$knnAlgorithm,
+    knnBackend = object$knnBackend,
+    knnWorkers = object$knnWorkers,
+    biocNeighborAlgorithm = object$biocNeighborAlgorithm,
+    hnswM = object$hnswM,
+    hnswEf = object$hnswEf
+  )
+  OverUnderCheckUserInterrupt()
+
+  balancedPredictors <- as.data.frame(samplingResult$balancedData$x, stringsAsFactors = FALSE)
+  names(balancedPredictors) <- predictorNames
+  balancedPredictors[[targetColumn]] <- samplingResult$balancedData$y
+  balancedPredictors[, originalNames, drop = FALSE]
+}
+
+#' @export
+required_pkgs.step_balance <- function(x, ...){
+  c("instanceengineering", "recipes")
+}
+
+#' @export
+tidy.step_balance <- function(x, ...){
+  terms <- if(isTRUE(x$trained)) x$columns else recipes::sel2char(x$terms)
+  data.frame(
+    terms = terms,
+    underRatio = x$underRatio,
+    kUnder = x$kUnder,
+    id = x$id,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' @export
+print.step_balance <- function(x, width = max(20, options()$width - 30), ...){
+  title <- "Balanceamento NearMiss-1 usando "
+  columns <- if(isTRUE(x$trained)) x$columns else recipes::sel2char(x$terms)
+  recipes::print_step(columns, x$terms, x$trained, title, width)
+  invisible(x)
 }
