@@ -1,0 +1,16 @@
+{
+  "name": "instanceengineering-r",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspace/instance_engineering",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "REditorSupport.r",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
