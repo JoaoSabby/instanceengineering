@@ -1238,7 +1238,12 @@ bake.step_balance <- function(object, new_data, ...){
   balancedPredictors <- as.data.frame(samplingResult$balancedData$x, stringsAsFactors = FALSE)
   names(balancedPredictors) <- predictorNames
   balancedPredictors[[targetColumn]] <- samplingResult$balancedData$y
-  balancedPredictors[, originalNames, drop = FALSE]
+  
+  data <- balancedPredictors[, originalNames, drop = FALSE]
+
+  data <- tibble::as_tibble(data)
+  
+  return(data)
 }
 
 #' @export
