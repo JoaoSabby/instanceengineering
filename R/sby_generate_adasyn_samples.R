@@ -178,7 +178,7 @@ sby_generate_adasyn_samples <- function(
       sby_minority_matrix,
       sby_minority_neighbor_index,
       as.integer(sby_synthetic_per_row),
-      PACKAGE = "instanceengineering"
+      PACKAGE = "instenginer"
     )
 
     # Verifica se ha solicitacao de interrupcao apos geracao nativa

@@ -7,13 +7,14 @@
 #' @return Retorna invisivelmente TRUE apos a verificacao de interrupcao
 #' @noRd
 sby_adanear_check_user_interrupt <- function(){
+  
   # Utiliza rotina nativa de interrupcao quando disponivel
   if(sby_adanear_native_available()){
 
     # Aciona ponto de interrupcao implementado em codigo nativo
     .Call(
       "OU_CheckUserInterruptC",
-      PACKAGE = "instanceengineering"
+      PACKAGE = "instenginer"
     )
   }else{
 

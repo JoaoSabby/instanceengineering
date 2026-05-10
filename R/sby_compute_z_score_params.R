@@ -22,7 +22,7 @@ sby_compute_z_score_params <- function(sby_x_matrix){
     sby_params <- .Call(
       "OU_ComputeZScoreParamsC",
       sby_x_matrix,
-      PACKAGE = "instanceengineering"
+      PACKAGE = "instenginer"
     )
   }else{
 

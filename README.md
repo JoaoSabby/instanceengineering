@@ -1,4 +1,4 @@
-# instanceengineering — balanceamento binário ADASYN + NearMiss
+# instenginer — balanceamento binário ADASYN + NearMiss
 
 Este repositório é um **pacote R em desenvolvimento** para balanceamento binário
 com **ADASYN** (oversampling) e **NearMiss-1** (undersampling), usando matrizes
@@ -26,9 +26,9 @@ A API foi padronizada com as seguintes regras:
   diagnósticos, informações de escala e metadados de tipos.
 - Consultas KNN longas são executadas em blocos para que `Ctrl + C` seja
   verificado entre os blocos. Ajuste o tamanho com
-  `options(instanceengineering.sby_knn_query_chunk_size = 1000L)`. Para
+  `options(instenginer.sby_knn_query_chunk_size = 1000L)`. Para
   `sby_knn_engine = "RcppHNSW"`, a busca usa blocos menores por padrão
-  (`options(instanceengineering.sby_hnsw_query_chunk_size = 100L)`). Reduza o
+  (`options(instenginer.sby_hnsw_query_chunk_size = 100L)`). Reduza o
   valor para interrupções mais responsivas ou aumente para menor overhead.
 
 ## Funções principais
@@ -122,8 +122,8 @@ sby_audit$sby_balanced_data
 
 O pacote define `ByteCompile: true` no `DESCRIPTION`. Durante `R CMD INSTALL`,
 o R usa o pacote base `compiler` para byte-compilar as funções R carregadas no
-namespace/lazy-load database do pacote. Assim, ao chamar `library(instanceengineering)`
-ou `require(instanceengineering)`, as funções R do pacote já são carregadas na
+namespace/lazy-load database do pacote. Assim, ao chamar `library(instenginer)`
+ou `require(instenginer)`, as funções R do pacote já são carregadas na
 forma byte-compilada quando a instalação respeita esse campo.
 
 Isso evita depender de `compiler::cmpfun()` na primeira execução da função em
@@ -139,15 +139,16 @@ mínimas do pacote.
 Para criar o ambiente manualmente:
 
 ```sh
-docker build -t instanceengineering-r .
-docker run --rm -it -v "$PWD":/workspace/instance_engineering instanceengineering-r
+docker build -t instenginer-r .
+docker run --rm -it -v "$PWD":/workspace/instenginer
+instenginer-r
 ```
 
 Dentro do container, valide o pacote com:
 
 ```sh
 R CMD build .
-R CMD check instanceengineering_0.2.3.tar.gz
+R CMD check instenginer_0.2.3.tar.gz
 ```
 
 ## Instalação local
@@ -191,7 +192,7 @@ install.packages("RcppHNSW")
 
 ```sh
 R CMD build .
-R CMD check instanceengineering_0.2.3.tar.gz
+R CMD check instenginer_0.2.3.tar.gz
 R CMD INSTALL .
 ```
 

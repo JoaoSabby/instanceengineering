@@ -1,5 +1,5 @@
 {
-  "name": "instanceengineering-r",
+  "name": "instenginer-r",
   "build": {
     "dockerfile": "../Dockerfile",
     "context": ".."

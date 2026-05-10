@@ -32,7 +32,7 @@ sby_apply_z_score_scaling_matrix <- function(sby_x_matrix, sby_scaling_info){
       as.numeric(sby_scaling_info$centers),
       as.numeric(sby_scaling_info$scales),
       FALSE,
-      PACKAGE = "instanceengineering"
+      PACKAGE = "instenginer"
     )
   }else{
 

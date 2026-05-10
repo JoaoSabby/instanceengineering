@@ -26,7 +26,7 @@ sby_get_knnx <- function(
   sby_knn_workers,
   sby_hnsw_m,
   sby_hnsw_ef,
-  sby_knn_query_chunk_size = getOption("instanceengineering.sby_knn_query_chunk_size", 1000L)
+  sby_knn_query_chunk_size = getOption("instenginer.sby_knn_query_chunk_size", 1000L)
 ){
   
   # Verifica se ha solicitacao de interrupcao antes da consulta KNN
@@ -159,7 +159,7 @@ sby_get_knnx <- function(
     # Valida tamanho de bloco especifico para consultas HNSW
     sby_hnsw_query_chunk_size <- sby_validate_knn_query_chunk_size(
       sby_knn_query_chunk_size = getOption(
-        "instanceengineering.sby_hnsw_query_chunk_size",
+        "instenginer.sby_hnsw_query_chunk_size",
         100L
       )
     )
