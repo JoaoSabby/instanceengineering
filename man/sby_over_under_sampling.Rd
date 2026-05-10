@@ -94,6 +94,12 @@ All public function names and parameters use the \code{sby_} prefix and
 \code{snake_case}. Previous CamelCase function names are intentionally not kept
 because the package is under active development and has not been released to
 clients.
+Long KNN queries are split into chunks so user interrupts such as Ctrl+C are
+checked between chunks. The general chunk size defaults to 1000 query rows and
+can be changed with \code{options(instanceengineering.sby_knn_query_chunk_size = 1000L)}.
+For \code{sby_knn_backend = "RcppHNSW"}, search chunks default to 100 query rows
+and can be changed with \code{options(instanceengineering.sby_hnsw_query_chunk_size = 100L)};
+smaller values improve interrupt responsiveness at the cost of more overhead.
 }
 \examples{
 set.seed(1)

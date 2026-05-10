@@ -24,6 +24,12 @@ A API foi padronizada com as seguintes regras:
 - O parâmetro `sby_audit = FALSE` retorna somente o tibble balanceado.
 - O parâmetro `sby_audit = TRUE` retorna uma lista com dados balanceados,
   diagnósticos, informações de escala e metadados de tipos.
+- Consultas KNN longas são executadas em blocos para que `Ctrl + C` seja
+  verificado entre os blocos. Ajuste o tamanho com
+  `options(instanceengineering.sby_knn_query_chunk_size = 1000L)`. Para
+  `sby_knn_backend = "RcppHNSW"`, a busca usa blocos menores por padrão
+  (`options(instanceengineering.sby_hnsw_query_chunk_size = 100L)`). Reduza o
+  valor para interrupções mais responsivas ou aumente para menor overhead.
 
 ## Funções principais
 
