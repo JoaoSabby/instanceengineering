@@ -1,5 +1,10 @@
 #' Aplicar subamostragem NearMiss em dados binarios
 #'
+#' @details
+#' A funcao compoe a interface publica do pacote e valida os contratos de entrada antes de executar a etapa principal
+#' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
+#' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
+#'
 #' @title Aplicar subamostragem NearMiss em dados binarios
 #' @name sby_nearmiss
 #' @param sby_predictor_data Data frame ou matriz com variaveis preditoras numericas
@@ -38,7 +43,8 @@ sby_nearmiss <- function(
   sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
-) {
+){
+  
   # Verifica se ha solicitacao de interrupcao pelo usuario
   sby_over_under_check_user_interrupt()
 
@@ -98,7 +104,7 @@ sby_nearmiss <- function(
   )
 
   # Verifica se o numero de vizinhos de subamostragem e valido
-  if (!is.numeric(sby_k_under) || length(sby_k_under) != 1L || is.na(sby_k_under) || sby_k_under < 1L) {
+  if(!is.numeric(sby_k_under) || length(sby_k_under) != 1L || is.na(sby_k_under) || sby_k_under < 1L){
 
     # Aborta quando o parametro NearMiss nao representa inteiro positivo
     sby_over_under_abort(
@@ -110,6 +116,7 @@ sby_nearmiss <- function(
   sby_x_matrix <- sby_over_under_as_numeric_matrix(
     sby_predictor_data = sby_predictor_data
   )
+  
   colnames(sby_x_matrix) <- sby_over_under_get_column_names(
     sby_predictor_data = sby_predictor_data
   )
@@ -132,7 +139,7 @@ sby_nearmiss <- function(
   )
 
   # Infere informacoes de tipo quando nao foram precomputadas
-  if (is.null(sby_type_info)) {
+  if(is.null(sby_type_info)){
 
     # Calcula metadados de tipos numericos a partir dos preditores originais
     sby_type_info <- sby_infer_numeric_column_types(
@@ -141,7 +148,7 @@ sby_nearmiss <- function(
   }
 
   # Verifica compatibilidade entre metadados de tipos e colunas preditoras
-  if (NCOL(sby_x_matrix) != nrow(sby_type_info)) {
+  if(NCOL(sby_x_matrix) != nrow(sby_type_info)){
 
     # Aborta quando os metadados nao cobrem todas as colunas preditoras
     sby_over_under_abort(
@@ -150,10 +157,10 @@ sby_nearmiss <- function(
   }
 
   # Define parametros de escala a partir do estado informado da entrada
-  sby_scaling_info <- if (isTRUE(sby_input_already_scaled)) {
+  sby_scaling_info <- if(isTRUE(sby_input_already_scaled)){
 
     # Verifica se parametros de escala foram fornecidos para entrada ja escalada
-    if (is.null(sby_precomputed_scaling)) {
+    if(is.null(sby_precomputed_scaling)){
 
       # Aborta quando nao ha referencia para restauracao da escala original
       sby_over_under_abort(
@@ -163,13 +170,13 @@ sby_nearmiss <- function(
 
     # Reutiliza parametros de escala ja informados pelo chamador
     sby_precomputed_scaling
-  } else if (is.null(sby_precomputed_scaling)) {
+  }else if(is.null(sby_precomputed_scaling)){
 
     # Calcula parametros de escala a partir dos preditores convertidos
     sby_compute_z_score_params(
       sby_x_matrix = sby_x_matrix
     )
-  } else {
+  }else{
 
     # Valida parametros de escala precomputados contra a largura dos preditores
     sby_validate_scaling_info(
@@ -182,11 +189,11 @@ sby_nearmiss <- function(
   }
 
   # Define matriz de trabalho conforme o estado de escalonamento da entrada
-  if (isTRUE(sby_input_already_scaled)) {
+  if(isTRUE(sby_input_already_scaled)){
 
     # Reutiliza matriz numerica porque a entrada ja esta padronizada
     sby_x_scaled <- sby_x_matrix
-  } else {
+  }else{
 
     # Aplica padronizacao z-score usando parametros validados
     sby_x_scaled <- sby_apply_z_score_scaling_matrix(
@@ -204,20 +211,23 @@ sby_nearmiss <- function(
   )
 
   # Mantem todos os registros quando as classes ja estao balanceadas
-  if (sby_class_counts[[1L]] == sby_class_counts[[2L]]) {
+  if(sby_class_counts[[1L]] == sby_class_counts[[2L]]){
 
     # Define indices e objetos reduzidos sem remocao de linhas
     sby_retained_index <- seq_len(
       length.out = nrow(sby_x_scaled)
     )
+    
     sby_reduced_scaled <- sby_x_scaled
     sby_reduced_target <- sby_target_factor
-  } else {
+    
+  }else{
 
     # Identifica rotulos e indices das classes minoritaria e majoritaria
     sby_class_roles    <- sby_get_binary_class_roles(
       sby_target_factor = sby_target_factor
     )
+    
     sby_minority_index <- which(
       x = sby_target_factor == sby_class_roles$sby_minority_label
     )
@@ -240,7 +250,7 @@ sby_nearmiss <- function(
     )
 
     # Verifica se existem vizinhos minoritarios suficientes para o criterio
-    if (sby_effective_k < 1L) {
+    if(sby_effective_k < 1L){
 
       # Aborta quando o conjunto minoritario nao possui linhas elegiveis
       sby_over_under_abort(
@@ -302,7 +312,7 @@ sby_nearmiss <- function(
   )
 
   # Define preditores finais com ou sem restauracao dos tipos originais
-  sby_final_predictors <- if (sby_restore_types) {
+  sby_final_predictors <- if(sby_restore_types){
 
     # Restaura classes numericas originais e retorna estrutura tabular
     sby_restore_numeric_column_types(
@@ -310,7 +320,7 @@ sby_nearmiss <- function(
       sby_type_info     = sby_type_info,
       sby_as_data_frame = TRUE
     )
-  } else {
+  }else{
 
     # Converte matriz restaurada em data frame mantendo nomes originais
     sby_out <- as.data.frame(
@@ -384,7 +394,7 @@ sby_nearmiss <- function(
   )
 
   # Retorna estrutura completa quando auditoria foi solicitada
-  if (isTRUE(sby_audit)) {
+  if(isTRUE(sby_audit)){
 
     # Entrega dados balanceados, metadados e diagnosticos ao chamador
     return(sby_result)

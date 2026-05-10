@@ -1,65 +1,143 @@
-
 #' Validar entradas de sampling
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_predictor_data Dados preditores em data frame ou matriz
+#' @param sby_target_vector Vetor alvo binario associado aos preditores
+#' @param sby_seed Semente numerica usada para reprodutibilidade
+#'
+#' @return Retorna invisivelmente TRUE quando as entradas sao validas
 #' @noRd
 sby_validate_sampling_inputs <- function(
   sby_predictor_data,
   sby_target_vector,
   sby_seed
-) {
+){
+  # Carrega dependencias necessarias para as rotinas de sampling
   sby_over_under_load_packages()
 
-  if (!is.data.frame(sby_predictor_data) && !is.matrix(sby_predictor_data)) {
-    sby_over_under_abort("'sby_predictor_data' deve ser data.frame ou matrix")
+  # Verifica se preditores possuem classe tabular suportada
+  if(!(is.data.frame(sby_predictor_data) || is.matrix(sby_predictor_data))){
+
+    # Aborta quando os preditores nao sao data frame nem matriz
+    sby_over_under_abort(
+      sby_message = "'sby_predictor_data' deve ser data.frame ou matrix"
+    )
   }
 
-  if (NROW(sby_predictor_data) == 0L) {
-    sby_over_under_abort("'sby_predictor_data' deve conter ao menos uma linha")
+  # Verifica se os preditores possuem ao menos uma linha
+  if(NROW(sby_predictor_data) == 0L){
+
+    # Aborta quando nao ha observacoes para balanceamento
+    sby_over_under_abort(
+      sby_message = "'sby_predictor_data' deve conter ao menos uma linha"
+    )
   }
 
-  if (length(sby_target_vector) != NROW(sby_predictor_data)) {
-    sby_over_under_abort("'sby_target_vector' deve ter o mesmo numero de linhas de 'sby_predictor_data'")
+  # Verifica se alvo e preditores possuem o mesmo numero de linhas
+  if(length(sby_target_vector) != NROW(sby_predictor_data)){
+
+    # Aborta quando o alvo nao esta alinhado aos preditores
+    sby_over_under_abort(
+      sby_message = "'sby_target_vector' deve ter o mesmo numero de linhas de 'sby_predictor_data'"
+    )
   }
 
-  if (anyNA(sby_predictor_data)) {
-    sby_over_under_abort("'sby_predictor_data' nao pode conter NA")
+  # Verifica ausencia de valores faltantes nos preditores
+  if(anyNA(sby_predictor_data)){
+
+    # Aborta quando preditores contem valores ausentes
+    sby_over_under_abort(
+      sby_message = "'sby_predictor_data' nao pode conter NA"
+    )
   }
 
-  if (anyNA(sby_target_vector)) {
-    sby_over_under_abort("'sby_target_vector' nao pode conter NA")
+  # Verifica ausencia de valores faltantes no alvo
+  if(anyNA(sby_target_vector)){
+
+    # Aborta quando alvo contem valores ausentes
+    sby_over_under_abort(
+      sby_message = "'sby_target_vector' nao pode conter NA"
+    )
   }
 
-  if (is.matrix(sby_predictor_data)) {
+  # Define objeto auxiliar para verificacao de tipos numericos
+  if(is.matrix(sby_predictor_data)){
+
+    # Reutiliza matriz de entrada para validacao de tipo
     sby_x_check <- sby_predictor_data
-  } else {
+  }else{
+
+    # Reutiliza data frame de entrada para validacao por coluna
     sby_x_check <- sby_predictor_data
   }
-  sby_is_numeric_column <- if (is.matrix(sby_x_check)) {
+
+  # Avalia se todos os preditores sao numericos
+  sby_is_numeric_column <- if(is.matrix(sby_x_check)){
+
+    # Verifica tipo numerico de matriz completa
     is.numeric(sby_x_check)
-  } else {
-    vapply(sby_x_check, is.numeric, logical(1L))
+  }else{
+
+    # Verifica tipo numerico para cada coluna do data frame
+    vapply(
+      X = sby_x_check,
+      FUN = is.numeric,
+      FUN.VALUE = logical(1L)
+    )
   }
 
-  if (!all(sby_is_numeric_column)) {
-    sby_over_under_abort("Todos os preditores devem ser numericos")
+  # Verifica se todos os preditores passaram na validacao numerica
+  if(!all(sby_is_numeric_column)){
+
+    # Aborta quando ha preditor nao numerico
+    sby_over_under_abort(
+      sby_message = "Todos os preditores devem ser numericos"
+    )
   }
 
-  sby_target_factor <- as.factor(sby_target_vector)
-  if (nlevels(sby_target_factor) != 2L) {
-    sby_over_under_abort("'sby_target_vector' deve ser binario")
+  # Converte alvo para fator para validacao de classes
+  sby_target_factor <- as.factor(
+    x = sby_target_vector
+  )
+
+  # Verifica se o alvo possui exatamente duas classes
+  if(nlevels(sby_target_factor) != 2L){
+
+    # Aborta quando o alvo nao e binario
+    sby_over_under_abort(
+      sby_message = "'sby_target_vector' deve ser binario"
+    )
   }
 
-  sby_class_counts <- table(sby_target_factor)
-  if (any(sby_class_counts < 2L)) {
-    sby_over_under_abort("Cada classe deve ter ao menos 2 observacoes")
+  # Calcula distribuicao de classes do alvo
+  sby_class_counts <- table(
+    sby_target_factor
+  )
+
+  # Verifica se cada classe possui observacoes suficientes
+  if(any(sby_class_counts < 2L)){
+
+    # Aborta quando alguma classe tem menos de duas observacoes
+    sby_over_under_abort(
+      sby_message = "Cada classe deve ter ao menos 2 observacoes"
+    )
   }
 
-  if (!is.numeric(sby_seed) || length(sby_seed) != 1L || is.na(sby_seed) || !is.finite(sby_seed)) {
-    sby_over_under_abort("'sby_seed' deve ser escalar numerico")
+  # Verifica se a semente e um escalar numerico finito
+  if(!(is.numeric(sby_seed) && length(sby_seed) == 1L && !is.na(sby_seed) && is.finite(sby_seed))){
+
+    # Aborta quando a semente nao atende ao contrato esperado
+    sby_over_under_abort(
+      sby_message = "'sby_seed' deve ser escalar numerico"
+    )
   }
 
-  invisible(TRUE)
+  # Retorna sucesso invisivel apos validacao das entradas
+  return(invisible(TRUE))
 }
-
 ####
 ## Fim
 #

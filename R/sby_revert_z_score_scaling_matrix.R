@@ -1,22 +1,62 @@
-
 #' Reverter z-score em matrix double
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_x_matrix Matriz numerica padronizada a ser revertida
+#' @param sby_scaling_info Lista com centros e escalas de padronizacao
+#'
+#' @return Matriz numerica restaurada para a escala original
 #' @noRd
-sby_revert_z_score_scaling_matrix <- function(sby_x_matrix, sby_scaling_info) {
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(sby_x_matrix)
-  sby_validate_scaling_info(sby_scaling_info, NCOL(sby_x_matrix))
+sby_revert_z_score_scaling_matrix <- function(sby_x_matrix, sby_scaling_info){
+  # Normaliza entrada para matriz numerica de precisao dupla
+  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+    sby_predictor_data = sby_x_matrix
+  )
 
-  if (sby_over_under_native_available()) {
-    sby_restored <- .Call("OU_ApplyZScoreC", sby_x_matrix, as.numeric(sby_scaling_info$centers), as.numeric(sby_scaling_info$scales), TRUE, PACKAGE = "instanceengineering")
-  } else {
-    sby_unscaled <- Rfast::eachrow(sby_x_matrix, sby_scaling_info$scales, oper = "*")
-    sby_restored <- Rfast::eachrow(sby_unscaled, sby_scaling_info$centers, oper = "+")
+  # Valida parametros de escala contra a quantidade de colunas
+  sby_validate_scaling_info(
+    sby_scaling_info           = sby_scaling_info,
+    sby_predictor_column_count = NCOL(sby_x_matrix)
+  )
+
+  # Aplica implementacao nativa quando disponivel
+  if(sby_over_under_native_available()){
+
+    # Reverte z-score por chamada nativa registrada no pacote
+    sby_restored <- .Call(
+      "OU_ApplyZScoreC",
+      sby_x_matrix,
+      as.numeric(sby_scaling_info$centers),
+      as.numeric(sby_scaling_info$scales),
+      TRUE,
+      PACKAGE = "instanceengineering"
+    )
+  }else{
+
+    # Reverte escala e centralizacao usando operacoes vetorizadas em R
+    sby_unscaled <- Rfast::eachrow(
+      x = sby_x_matrix,
+      y = sby_scaling_info$scales,
+      oper = "*"
+    )
+    sby_restored <- Rfast::eachrow(
+      x = sby_unscaled,
+      y = sby_scaling_info$centers,
+      oper = "+"
+    )
   }
 
+  # Garante armazenamento numerico double apos a reversao
   storage.mode(sby_restored) <- "double"
-  colnames(sby_restored) <- colnames(sby_x_matrix)
-  sby_restored
-}
 
+  # Preserva nomes de colunas da matriz original
+  colnames(sby_restored) <- colnames(sby_x_matrix)
+
+  # Retorna matriz restaurada
+  return(sby_restored)
+}
 ####
 ## Fim
 #

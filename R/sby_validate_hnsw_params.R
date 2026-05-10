@@ -1,17 +1,39 @@
-
 #' Validar parametros do backend RcppHNSW
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_hnsw_m Conectividade solicitada para o indice HNSW
+#' @param sby_hnsw_ef Tamanho da lista dinamica HNSW solicitada
+#'
+#' @return Lista com parametros HNSW convertidos para inteiros
 #' @noRd
-sby_validate_hnsw_params <- function(sby_hnsw_m, sby_hnsw_ef) {
-  if (!is.numeric(sby_hnsw_m) || length(sby_hnsw_m) != 1L || is.na(sby_hnsw_m) || !is.finite(sby_hnsw_m) || sby_hnsw_m < 2L) {
-    sby_over_under_abort("'sby_hnsw_m' deve ser inteiro >= 2")
-  }
-  if (!is.numeric(sby_hnsw_ef) || length(sby_hnsw_ef) != 1L || is.na(sby_hnsw_ef) || !is.finite(sby_hnsw_ef) || sby_hnsw_ef < 1L) {
-    sby_over_under_abort("'sby_hnsw_ef' deve ser inteiro positivo")
+sby_validate_hnsw_params <- function(sby_hnsw_m, sby_hnsw_ef){
+  # Verifica se a conectividade HNSW e um escalar numerico finito valido
+  if(!(is.numeric(sby_hnsw_m) && length(sby_hnsw_m) == 1L && !is.na(sby_hnsw_m) && is.finite(sby_hnsw_m) && sby_hnsw_m >= 2L)){
+
+    # Aborta quando a conectividade HNSW esta fora do dominio permitido
+    sby_over_under_abort(
+      sby_message = "'sby_hnsw_m' deve ser inteiro >= 2"
+    )
   }
 
-  list(sby_hnsw_m = as.integer(sby_hnsw_m), sby_hnsw_ef = as.integer(sby_hnsw_ef))
+  # Verifica se a lista dinamica HNSW e um escalar numerico positivo finito
+  if(!(is.numeric(sby_hnsw_ef) && length(sby_hnsw_ef) == 1L && !is.na(sby_hnsw_ef) && is.finite(sby_hnsw_ef) && sby_hnsw_ef >= 1L)){
+
+    # Aborta quando o parametro de busca HNSW esta fora do dominio permitido
+    sby_over_under_abort(
+      sby_message = "'sby_hnsw_ef' deve ser inteiro positivo"
+    )
+  }
+
+  # Retorna parametros HNSW normalizados como inteiros
+  return(list(
+    sby_hnsw_m  = as.integer(sby_hnsw_m),
+    sby_hnsw_ef = as.integer(sby_hnsw_ef)
+  ))
 }
-
 ####
 ## Fim
 #

@@ -1,22 +1,49 @@
-
 #' Carregar dependencias do fluxo de sampling
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @return Retorna invisivelmente TRUE apos validar dependencias
 #' @noRd
-sby_over_under_load_packages <- function() {
-  if (isTRUE(sby_over_under_state$sby_packages_loaded)) {
+sby_over_under_load_packages <- function(){
+  # Evita recarregar dependencias ja validadas na sessao
+  if(isTRUE(sby_over_under_state$sby_packages_loaded)){
+
+    # Retorna sucesso quando o estado global ja indica dependencias carregadas
     return(invisible(TRUE))
   }
 
-  sby_package_names <- c("cli", "Rfast")
-  for (sby_package_name in sby_package_names) {
-    if (!requireNamespace(sby_package_name, quietly = TRUE)) {
-      sby_over_under_abort(paste0("Pacote necessario nao encontrado: ", sby_package_name))
+  # Define pacotes obrigatorios para o fluxo de sampling
+  sby_package_names <- c(
+    "cli",
+    "Rfast"
+  )
+
+  # Valida disponibilidade de cada pacote obrigatorio
+  for(sby_package_name in sby_package_names){
+    # Verifica se o pacote corrente esta instalado
+    if(!requireNamespace(
+      package = sby_package_name,
+      quietly = TRUE
+    )){
+
+      # Aborta informando a dependencia ausente
+      sby_over_under_abort(
+        sby_message = paste0(
+          "Pacote necessario nao encontrado: ",
+          sby_package_name
+        )
+      )
     }
   }
 
+  # Registra que as dependencias foram validadas na sessao
   sby_over_under_state$sby_packages_loaded <- TRUE
-  invisible(TRUE)
-}
 
+  # Retorna sucesso invisivel apos carregamento das dependencias
+  return(invisible(TRUE))
+}
 ####
 ## Fim
 #
