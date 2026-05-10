@@ -2,13 +2,26 @@ Package: instenginer
 Type: Package
 Title: High-Performance to Instance Engineering  
 Version: 0.2.6
-Authors@R: person("Joao", "B. G. de Brito", email = "joao@sabby.com.br", role = c("aut", "cre"))
+Authors@R: person(
+  given = "João Batista",
+  family = "Gonçalves de Brito",
+  role = c("aut", "cre"),
+  comment = "https://orcid.org/0000-0002-4645-5217",
+  email = "joao@sabby.com.br",
+  role = c("aut", "cre")
+)
 Description: Provides high-performance binary over- and under-sampling routines
     using ADASYN and NearMiss-1. The implementation uses numeric matrices,
     optional native C kernels, Rfast fallbacks, and configurable nearest-neighbor
     backends for exact or approximate searches.
 License: MIT + file LICENSE
+URL: https://github.com/JoaoSabby/instenginer
+BugReports: https://github.com/JoaoSabby/instenginer/issues
 Encoding: UTF-8
+Language: pt_BR
+LazyData: true
+NeedsCompilation: yes
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 ByteCompile: true
@@ -16,7 +29,7 @@ Depends:
     R (>= 4.0.0)
 Imports:
     cli,
-    RcppHNSW
+    RcppHNSW,
     FNN,
     generics,
     recipes,
