@@ -3,7 +3,7 @@
 #'
 #' @description
 #' `sby_step_balance()` adiciona uma etapa de balanceamento para recipes/tidymodels.
-#' A etapa executa `sby_apply_nearmiss_undersampling()` e, por padrao,
+#' A etapa executa `sby_nearmiss()` e, por padrao,
 #' e pulada em novos dados (`sby_skip = TRUE`), pois altera o numero de linhas.
 #'
 #' @param sby_recipe Objeto recipe.
@@ -44,7 +44,7 @@ sby_step_balance <- function(
   sby_hnsw_ef = 200L,
   sby_skip = TRUE,
   sby_id = recipes::rand_id("balance")
-){
+) {
   sby_over_under_check_user_interrupt()
   recipes::recipes_pkg_check(required_pkgs.step_sby_step_balance())
 
@@ -81,3 +81,7 @@ sby_step_balance <- function(
     )
   )
 }
+
+####
+## Fim
+#

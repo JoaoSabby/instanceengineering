@@ -19,7 +19,7 @@ sby_step_balance_new <- function(
   sby_hnsw_ef,
   sby_skip,
   sby_id
-){
+) {
   recipes::step(
     subclass = "sby_step_balance",
     terms = sby_terms,
@@ -46,3 +46,7 @@ sby_step_balance_new <- function(
     sby_id = sby_id
   )
 }
+
+####
+## Fim
+#

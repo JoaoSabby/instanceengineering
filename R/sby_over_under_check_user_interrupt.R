@@ -1,8 +1,8 @@
 
 #' Verificar interrupcao solicitada pelo usuario
 #' @noRd
-sby_over_under_check_user_interrupt <- function(){
-  if(sby_over_under_native_available()){
+sby_over_under_check_user_interrupt <- function() {
+  if (sby_over_under_native_available()) {
     .Call("OU_CheckUserInterruptC", PACKAGE = "instanceengineering")
   } else {
     Sys.sleep(0)
@@ -10,3 +10,7 @@ sby_over_under_check_user_interrupt <- function(){
 
   invisible(TRUE)
 }
+
+####
+## Fim
+#

@@ -1,8 +1,12 @@
 
 #' @export
-tidy.step_sby_step_balance <- function(x, ...){
+tidy.step_sby_step_balance <- function(x, ...) {
   sby_x <- x
-  sby_terms <- if(isTRUE(sby_x$sby_trained)) sby_x$sby_columns else recipes::sel2char(sby_x$sby_terms)
+  if (isTRUE(sby_x$sby_trained)) {
+    sby_terms <- sby_x$sby_columns
+  } else {
+    sby_terms <- recipes::sel2char(sby_x$sby_terms)
+  }
   data.frame(
     sby_terms = sby_terms,
     sby_under_ratio = sby_x$sby_under_ratio,
@@ -12,3 +16,7 @@ tidy.step_sby_step_balance <- function(x, ...){
     stringsAsFactors = FALSE
   )
 }
+
+####
+## Fim
+#

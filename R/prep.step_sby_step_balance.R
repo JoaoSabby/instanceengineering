@@ -1,13 +1,13 @@
 
 #' @export
-prep.step_sby_step_balance <- function(x, training, info = NULL, ...){
+prep.step_sby_step_balance <- function(x, training, info = NULL, ...) {
   sby_x <- x
   sby_training <- training
   sby_info <- info
   sby_over_under_check_user_interrupt()
 
   sby_selected_columns <- recipes::recipes_eval_select(sby_x$sby_terms, sby_training, sby_info)
-  if(length(sby_selected_columns) != 1L){
+  if (length(sby_selected_columns) != 1L) {
     sby_over_under_abort("'sby_step_balance()' deve selecionar exatamente uma coluna de desfecho")
   }
 
@@ -31,3 +31,7 @@ prep.step_sby_step_balance <- function(x, training, info = NULL, ...){
     sby_id = sby_x$sby_id
   )
 }
+
+####
+## Fim
+#

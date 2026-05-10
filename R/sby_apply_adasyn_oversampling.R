@@ -1,7 +1,9 @@
 
 
-#' Aplicar oversampling com ADASYN
+#' Aplicar oversampling com sby_adasyn
 #'
+#' @title Aplicar oversampling com sby_adasyn
+#' @name sby_adasyn
 #' @param sby_predictor_data data.frame ou matrix numerica.
 #' @param sby_target_vector vetor binario.
 #' @param sby_over_ratio fator de expansao relativa da minoria.
@@ -18,7 +20,7 @@
 #' @param sby_hnsw_ef tamanho da lista dinamica de construcao/busca RcppHNSW.
 #' @return Tibble balanceado quando sby_audit = FALSE; lista de auditoria quando TRUE.
 #' @export
-sby_apply_adasyn_oversampling <- function(
+sby_adasyn <- function(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -33,7 +35,7 @@ sby_apply_adasyn_oversampling <- function(
   sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
-){
+) {
   sby_over_under_check_user_interrupt()
   sby_audit <- sby_validate_logical_scalar(sby_audit, "sby_audit")
   sby_return_scaled <- sby_validate_logical_scalar(sby_return_scaled, "sby_return_scaled")
@@ -47,7 +49,7 @@ sby_apply_adasyn_oversampling <- function(
   sby_hnsw_ef <- sby_hnsw_params$sby_hnsw_ef
   sby_validate_sampling_inputs(sby_predictor_data, sby_target_vector, sby_seed)
 
-  if(!is.numeric(sby_k_over) || length(sby_k_over) != 1L || is.na(sby_k_over) || sby_k_over < 1L){
+  if (!is.numeric(sby_k_over) || length(sby_k_over) != 1L || is.na(sby_k_over) || sby_k_over < 1L) {
     sby_over_under_abort("'sby_k_over' deve ser inteiro positivo")
   }
 
@@ -82,7 +84,7 @@ sby_apply_adasyn_oversampling <- function(
   sby_x_restored <- sby_revert_z_score_scaling_matrix(sby_adasyn_result$x, sby_scaling_info)
   sby_over_under_check_user_interrupt()
 
-  sby_final_predictors <- if(sby_restore_types) {
+  sby_final_predictors <- if (sby_restore_types) {
     sby_restore_numeric_column_types(sby_x_restored, sby_type_info, sby_as_data_frame = TRUE)
   } else {
     sby_out <- as.data.frame(sby_x_restored, stringsAsFactors = FALSE)
@@ -92,15 +94,36 @@ sby_apply_adasyn_oversampling <- function(
 
   sby_balanced_data <- sby_build_balanced_tibble(sby_final_predictors, sby_adasyn_result$y)
 
+  # Define metadado do algoritmo BiocNeighbors usado no diagnostico
+  sby_diagnostic_bioc_neighbor_algorithm <- ifelse(
+    test = identical(sby_knn_backend, "BiocNeighbors"),
+    yes = sby_bioc_neighbor_algorithm,
+    no = NA_character_
+  )
+
+  # Define metadado de conectividade HNSW usado no diagnostico
+  sby_diagnostic_hnsw_m <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_m,
+    no = NA_integer_
+  )
+
+  # Define metadado de busca HNSW usado no diagnostico
+  sby_diagnostic_hnsw_ef <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_ef,
+    no = NA_integer_
+  )
+
   sby_diagnostics <- list(
     sby_input_rows = NROW(sby_x_matrix),
     sby_output_rows = nrow(sby_balanced_data),
     sby_generated_rows = nrow(sby_balanced_data) - nrow(sby_x_matrix),
     sby_knn_backend = sby_knn_backend,
     sby_knn_workers = sby_knn_workers,
-    sby_bioc_neighbor_algorithm = if(identical(sby_knn_backend, "BiocNeighbors")) sby_bioc_neighbor_algorithm else NA_character_,
-    sby_hnsw_m = if(identical(sby_knn_backend, "RcppHNSW")) sby_hnsw_m else NA_integer_,
-    sby_hnsw_ef = if(identical(sby_knn_backend, "RcppHNSW")) sby_hnsw_ef else NA_integer_,
+    sby_bioc_neighbor_algorithm = sby_diagnostic_bioc_neighbor_algorithm,
+    sby_hnsw_m = sby_diagnostic_hnsw_m,
+    sby_hnsw_ef = sby_diagnostic_hnsw_ef,
     sby_input_class_distribution = table(sby_target_factor),
     sby_output_class_distribution = table(as.factor(sby_adasyn_result$y))
   )
@@ -112,16 +135,20 @@ sby_apply_adasyn_oversampling <- function(
     sby_diagnostics = sby_diagnostics
   )
 
-  if(isTRUE(sby_return_scaled)){
+  if (isTRUE(sby_return_scaled)) {
     sby_result$sby_balanced_scaled <- list(
       x = sby_adasyn_result$x,
       y = as.factor(sby_adasyn_result$y)
     )
   }
 
-  if(isTRUE(sby_audit)){
+  if (isTRUE(sby_audit)) {
     return(sby_result)
   }
 
   sby_balanced_data
 }
+
+####
+## Fim
+#

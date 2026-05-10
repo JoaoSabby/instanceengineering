@@ -1,12 +1,14 @@
 
-#' Pipeline combinado ADASYN + NearMiss
+#' Executar pipeline combinado com sby_adanear
 #'
-#' @inheritParams sby_apply_adasyn_oversampling
+#' @title Executar pipeline combinado com sby_adanear
+#' @name sby_adanear
+#' @inheritParams sby_adasyn
 #' @param sby_under_ratio fator de undersampling.
 #' @param sby_k_under vizinhos NearMiss.
 #' @return Tibble balanceado quando sby_audit = FALSE; lista de auditoria quando TRUE.
 #' @export
-sby_over_under_sampling <- function(
+sby_adanear <- function(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -22,7 +24,7 @@ sby_over_under_sampling <- function(
   sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
-){
+) {
   sby_over_under_check_user_interrupt()
   sby_audit <- sby_validate_logical_scalar(sby_audit, "sby_audit")
   sby_restore_types <- sby_validate_logical_scalar(sby_restore_types, "sby_restore_types")
@@ -36,7 +38,7 @@ sby_over_under_sampling <- function(
   sby_knn_algorithm <- sby_resolve_knn_algorithm(sby_knn_algorithm, NCOL(sby_predictor_data))
   sby_knn_backend <- sby_resolve_knn_backend(sby_knn_backend, sby_knn_workers)
 
-  sby_over_result <- sby_apply_adasyn_oversampling(
+  sby_over_result <- sby_adasyn(
     sby_predictor_data = sby_predictor_data,
     sby_target_vector = sby_target_vector,
     sby_over_ratio = sby_over_ratio,
@@ -54,7 +56,7 @@ sby_over_under_sampling <- function(
   )
   sby_over_under_check_user_interrupt()
 
-  sby_under_result <- sby_apply_nearmiss_undersampling(
+  sby_under_result <- sby_nearmiss(
     sby_predictor_data = sby_over_result$sby_balanced_scaled$x,
     sby_target_vector = sby_over_result$sby_balanced_scaled$y,
     sby_under_ratio = sby_under_ratio,
@@ -74,15 +76,36 @@ sby_over_under_sampling <- function(
   )
   sby_over_under_check_user_interrupt()
 
+  # Define metadado do algoritmo BiocNeighbors usado no diagnostico
+  sby_diagnostic_bioc_neighbor_algorithm <- ifelse(
+    test = identical(sby_knn_backend, "BiocNeighbors"),
+    yes = sby_bioc_neighbor_algorithm,
+    no = NA_character_
+  )
+
+  # Define metadado de conectividade HNSW usado no diagnostico
+  sby_diagnostic_hnsw_m <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_m,
+    no = NA_integer_
+  )
+
+  # Define metadado de busca HNSW usado no diagnostico
+  sby_diagnostic_hnsw_ef <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_ef,
+    no = NA_integer_
+  )
+
   sby_diagnostics <- list(
     sby_original_rows = NROW(sby_predictor_data),
     sby_after_oversampling_rows = nrow(sby_over_result$sby_balanced_scaled$x),
     sby_final_rows = nrow(sby_under_result$sby_balanced_data),
     sby_knn_backend = sby_knn_backend,
     sby_knn_workers = sby_knn_workers,
-    sby_bioc_neighbor_algorithm = if(identical(sby_knn_backend, "BiocNeighbors")) sby_bioc_neighbor_algorithm else NA_character_,
-    sby_hnsw_m = if(identical(sby_knn_backend, "RcppHNSW")) sby_hnsw_m else NA_integer_,
-    sby_hnsw_ef = if(identical(sby_knn_backend, "RcppHNSW")) sby_hnsw_ef else NA_integer_,
+    sby_bioc_neighbor_algorithm = sby_diagnostic_bioc_neighbor_algorithm,
+    sby_hnsw_m = sby_diagnostic_hnsw_m,
+    sby_hnsw_ef = sby_diagnostic_hnsw_ef,
     sby_original_class_distribution = table(as.factor(sby_target_vector)),
     sby_after_oversampling_class_distribution = table(sby_over_result$sby_balanced_scaled$y),
     sby_final_class_distribution = table(sby_under_result$sby_balanced_data$TARGET)
@@ -95,9 +118,13 @@ sby_over_under_sampling <- function(
     sby_diagnostics = sby_diagnostics
   )
 
-  if(isTRUE(sby_audit)){
+  if (isTRUE(sby_audit)) {
     return(sby_result)
   }
 
   sby_under_result$sby_balanced_data
 }
+
+####
+## Fim
+#

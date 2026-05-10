@@ -1,4 +1,4 @@
-#' sby_over_under_sampling
+#' sby_adanear
 #'
 #' @description
 #' Rotinas de over e undersampling binario com foco em robustez, baixo overhead
@@ -17,3 +17,7 @@ NULL
 
 sby_over_under_state <- new.env(parent = emptyenv())
 sby_over_under_state$sby_packages_loaded <- FALSE
+
+####
+## Fim
+#

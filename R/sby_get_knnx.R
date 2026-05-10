@@ -11,12 +11,12 @@ sby_get_knnx <- function(
   sby_hnsw_m,
   sby_hnsw_ef,
   sby_knn_query_chunk_size = getOption("instanceengineering.sby_knn_query_chunk_size", 1000L)
-){
+) {
   sby_over_under_check_user_interrupt()
   sby_knn_query_chunk_size <- sby_validate_knn_query_chunk_size(sby_knn_query_chunk_size)
 
-  if(identical(sby_knn_backend, "FNN")){
-    if(!requireNamespace("FNN", quietly = TRUE)){
+  if (identical(sby_knn_backend, "FNN")) {
+    if (!requireNamespace("FNN", quietly = TRUE)) {
       sby_over_under_abort("'sby_knn_backend = FNN' requer o pacote FNN")
     }
 
@@ -24,7 +24,7 @@ sby_get_knnx <- function(
       sby_query = sby_query,
       sby_k = sby_k,
       sby_knn_query_chunk_size = sby_knn_query_chunk_size,
-      sby_query_fun = function(sby_query_chunk){
+      sby_query_fun = function(sby_query_chunk) {
         FNN::get.knnx(
           data = sby_data,
           query = sby_query_chunk,
@@ -38,8 +38,8 @@ sby_get_knnx <- function(
     return(sby_knn_result)
   }
 
-  if(identical(sby_knn_backend, "RcppHNSW")){
-    if(!requireNamespace("RcppHNSW", quietly = TRUE)){
+  if (identical(sby_knn_backend, "RcppHNSW")) {
+    if (!requireNamespace("RcppHNSW", quietly = TRUE)) {
       sby_over_under_abort("'sby_knn_backend = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW').")
     }
 
@@ -63,7 +63,7 @@ sby_get_knnx <- function(
       sby_query = sby_query,
       sby_k = sby_k,
       sby_knn_query_chunk_size = sby_hnsw_query_chunk_size,
-      sby_query_fun = function(sby_query_chunk){
+      sby_query_fun = function(sby_query_chunk) {
         sby_hnsw_result <- RcppHNSW::hnsw_search(
           X = sby_query_chunk,
           ann = sby_hnsw_index,
@@ -84,7 +84,7 @@ sby_get_knnx <- function(
     return(sby_knn_result)
   }
 
-  if(!requireNamespace("BiocNeighbors", quietly = TRUE) || !requireNamespace("BiocParallel", quietly = TRUE)){
+  if (!requireNamespace("BiocNeighbors", quietly = TRUE) || !requireNamespace("BiocParallel", quietly = TRUE)) {
     sby_over_under_abort("'sby_knn_backend = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel')).")
   }
 
@@ -105,9 +105,9 @@ sby_get_knnx <- function(
 
 #' Executar consultas KNN em blocos interrompiveis
 #' @noRd
-sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_query_fun){
+sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_query_fun) {
   sby_query_rows <- nrow(sby_query)
-  if(sby_query_rows <= sby_knn_query_chunk_size){
+  if (sby_query_rows <= sby_knn_query_chunk_size) {
     return(sby_query_fun(sby_query))
   }
 
@@ -115,7 +115,7 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
   sby_nn_dist <- matrix(NA_real_, nrow = sby_query_rows, ncol = sby_k)
   sby_chunk_starts <- seq.int(1L, sby_query_rows, by = sby_knn_query_chunk_size)
 
-  for(sby_chunk_start in sby_chunk_starts){
+  for (sby_chunk_start in sby_chunk_starts) {
     sby_over_under_check_user_interrupt()
     sby_chunk_end <- min(sby_chunk_start + sby_knn_query_chunk_size - 1L, sby_query_rows)
     sby_chunk_index <- seq.int(sby_chunk_start, sby_chunk_end)
@@ -127,3 +127,7 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
 
   list(nn.index = sby_nn_index, nn.dist = sby_nn_dist)
 }
+
+####
+## Fim
+#
