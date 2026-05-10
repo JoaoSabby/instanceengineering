@@ -7,7 +7,7 @@
 \alias{required_pkgs.step_sby_step_balance}
 \title{Balance binary classes in recipes with NearMiss-1}
 \description{
-Adds a recipes/tidymodels step that runs \code{sby_apply_nearmiss_undersampling()}
+Adds a recipes/tidymodels step that runs \code{sby_nearmiss()}
 during recipe processing. The step changes the number of rows and therefore
 defaults to \code{sby_skip = TRUE} for new data.
 }
@@ -42,7 +42,7 @@ sby_step_balance(
 \item{sby_under_ratio}{Fraction of majority observations retained by NearMiss-1.}
 \item{sby_k_under}{Number of nearest minority neighbors used by NearMiss-1.}
 \item{sby_seed}{Numeric random seed.}
-\item{sby_audit}{Logical. When \code{FALSE}, \code{bake()} returns the balanced tibble. When \code{TRUE}, \code{bake()} returns the full audit list produced by \code{sby_apply_nearmiss_undersampling()}.}
+\item{sby_audit}{Logical. When \code{FALSE}, \code{bake()} returns the balanced tibble. When \code{TRUE}, \code{bake()} returns the full audit list produced by \code{sby_nearmiss()}.}
 \item{sby_restore_types}{Whether to restore inferred integer/binary numeric predictors.}
 \item{sby_knn_algorithm}{FNN algorithm when \code{sby_knn_backend = "FNN"}.}
 \item{sby_knn_backend}{Nearest-neighbor backend: \code{"FNN"}, \code{"BiocNeighbors"}, \code{"RcppHNSW"}, or \code{"auto"}.}
@@ -60,7 +60,7 @@ When baked with \code{sby_audit = TRUE}, the output is the audit list.
 \details{
 Select the binary outcome in \code{...}, for example
 \code{sby_step_balance(sby_recipe, y)}. All remaining columns are passed to
-\code{sby_apply_nearmiss_undersampling()} as numeric predictors, so categorical
+\code{sby_nearmiss()} as numeric predictors, so categorical
 predictors should be encoded by earlier recipe steps when needed.
 }
 \examples{

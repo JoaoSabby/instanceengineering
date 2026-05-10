@@ -34,7 +34,7 @@ A API foi padronizada com as seguintes regras:
 ## Funções principais
 
 ```r
-sby_over_under_sampling(
+sby_adanear(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -45,7 +45,7 @@ sby_over_under_sampling(
   sby_audit = FALSE
 )
 
-sby_apply_adasyn_oversampling(
+sby_adasyn(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -54,7 +54,7 @@ sby_apply_adasyn_oversampling(
   sby_audit = FALSE
 )
 
-sby_apply_nearmiss_undersampling(
+sby_nearmiss(
   sby_predictor_data,
   sby_target_vector,
   sby_under_ratio = 0.5,
@@ -85,7 +85,7 @@ sby_x <- data.frame(
 )
 sby_y <- factor(c(rep("minority", 10), rep("majority", 30)))
 
-sby_balanced <- sby_over_under_sampling(
+sby_balanced <- sby_adanear(
   sby_predictor_data = sby_x,
   sby_target_vector = sby_y,
   sby_over_ratio = 0.5,
@@ -98,7 +98,7 @@ sby_balanced
 Para obter auditoria completa:
 
 ```r
-sby_audit <- sby_over_under_sampling(
+sby_audit <- sby_adanear(
   sby_predictor_data = sby_x,
   sby_target_vector = sby_y,
   sby_over_ratio = 0.5,

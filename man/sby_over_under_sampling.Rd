@@ -1,7 +1,7 @@
-\name{sby_over_under_sampling}
-\alias{sby_over_under_sampling}
-\alias{sby_apply_adasyn_oversampling}
-\alias{sby_apply_nearmiss_undersampling}
+\name{sby_adanear}
+\alias{sby_adanear}
+\alias{sby_adasyn}
+\alias{sby_nearmiss}
 \title{High-performance binary over/under sampling}
 \description{
 Runs binary class-balancing routines using ADASYN oversampling, NearMiss-1
@@ -10,7 +10,7 @@ in development and does not preserve compatibility with the previous API names
 or return structure.
 }
 \usage{
-sby_over_under_sampling(
+sby_adanear(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -28,7 +28,7 @@ sby_over_under_sampling(
   sby_hnsw_ef = 200L
 )
 
-sby_apply_adasyn_oversampling(
+sby_adasyn(
   sby_predictor_data,
   sby_target_vector,
   sby_over_ratio = 0.2,
@@ -45,7 +45,7 @@ sby_apply_adasyn_oversampling(
   sby_hnsw_ef = 200L
 )
 
-sby_apply_nearmiss_undersampling(
+sby_nearmiss(
   sby_predictor_data,
   sby_target_vector,
   sby_under_ratio = 0.5,
@@ -105,6 +105,6 @@ smaller values improve interrupt responsiveness at the cost of more overhead.
 set.seed(1)
 sby_x <- data.frame(sby_a = rnorm(40), sby_b = rnorm(40))
 sby_y <- factor(c(rep("minority", 10), rep("majority", 30)))
-sby_res <- sby_over_under_sampling(sby_x, sby_y, sby_over_ratio = 0.5, sby_under_ratio = 0.8)
+sby_res <- sby_adanear(sby_x, sby_y, sby_over_ratio = 0.5, sby_under_ratio = 0.8)
 sby_res
 }

@@ -1,4 +1,4 @@
-#' sby_over_under_sampling
+#' sby_adanear
 #'
 #' @description
 #' Rotinas de over e undersampling binario com foco em robustez, baixo overhead
@@ -13,7 +13,14 @@
 #' - Mantem restauracao opcional de tipos para interpretabilidade.
 #'
 #' @keywords internal
+# Executa instrucao do fluxo preservado
 NULL
 
+# Executa instrucao do fluxo preservado
 sby_over_under_state <- new.env(parent = emptyenv())
+# Executa instrucao do fluxo preservado
 sby_over_under_state$sby_packages_loaded <- FALSE
+
+####
+## Fim
+#
