@@ -72,9 +72,9 @@ bake.step_sby_step_adanear <- function(object, new_data, ...){
     sby_audit                   = TRUE,
     sby_restore_types           = sby_object$sby_restore_types,
     sby_knn_algorithm           = sby_object$sby_knn_algorithm,
-    sby_knn_backend             = sby_object$sby_knn_backend,
+    sby_knn_engine             = sby_object$sby_knn_engine,
+    sby_distance_metric         = sby_object$sby_distance_metric,
     sby_knn_workers             = sby_object$sby_knn_workers,
-    sby_bioc_neighbor_algorithm = sby_object$sby_bioc_neighbor_algorithm,
     sby_hnsw_m                  = sby_object$sby_hnsw_m,
     sby_hnsw_ef                 = sby_object$sby_hnsw_ef
   )

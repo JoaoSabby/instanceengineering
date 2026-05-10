@@ -1,4 +1,4 @@
-#' Validar parametros do backend RcppHNSW
+#' Validar parametros do engine RcppHNSW
 #'
 #' @details
 #' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
@@ -15,7 +15,7 @@ sby_validate_hnsw_params <- function(sby_hnsw_m, sby_hnsw_ef){
   if(!(is.numeric(sby_hnsw_m) && length(sby_hnsw_m) == 1L && !is.na(sby_hnsw_m) && is.finite(sby_hnsw_m) && sby_hnsw_m >= 2L)){
 
     # Aborta quando a conectividade HNSW esta fora do dominio permitido
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_hnsw_m' deve ser inteiro >= 2"
     )
   }
@@ -24,7 +24,7 @@ sby_validate_hnsw_params <- function(sby_hnsw_m, sby_hnsw_ef){
   if(!(is.numeric(sby_hnsw_ef) && length(sby_hnsw_ef) == 1L && !is.na(sby_hnsw_ef) && is.finite(sby_hnsw_ef) && sby_hnsw_ef >= 1L)){
 
     # Aborta quando o parametro de busca HNSW esta fora do dominio permitido
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_hnsw_ef' deve ser inteiro positivo"
     )
   }

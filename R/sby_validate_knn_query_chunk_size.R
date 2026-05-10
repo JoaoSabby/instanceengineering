@@ -21,7 +21,7 @@ sby_validate_knn_query_chunk_size <- function(sby_knn_query_chunk_size){
   if(!(is.numeric(sby_knn_query_chunk_size) && length(sby_knn_query_chunk_size) == 1L && !is.na(sby_knn_query_chunk_size) && sby_knn_query_chunk_size >= 1L && sby_knn_query_chunk_size <= .Machine$integer.max)){
 
     # Aborta quando o tamanho de bloco KNN e invalido
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_knn_query_chunk_size' deve ser inteiro positivo"
     )
   }

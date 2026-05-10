@@ -4,7 +4,7 @@
 #' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
 #' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
 #'
-#' @param sby_knn_workers Numero de workers solicitado para o backend KNN
+#' @param sby_knn_workers Numero de workers solicitado para o engine KNN
 #'
 #' @return Numero inteiro positivo de workers validado
 #' @noRd
@@ -14,7 +14,7 @@ sby_validate_knn_workers <- function(sby_knn_workers){
   if(!(is.numeric(sby_knn_workers) && length(sby_knn_workers) == 1L && !is.na(sby_knn_workers) && is.finite(sby_knn_workers) && sby_knn_workers >= 1L)){
 
     # Aborta quando a configuracao de workers nao e valida
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_knn_workers' deve ser inteiro positivo"
     )
   }

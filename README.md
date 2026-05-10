@@ -2,7 +2,7 @@
 
 Este repositório é um **pacote R em desenvolvimento** para balanceamento binário
 com **ADASYN** (oversampling) e **NearMiss-1** (undersampling), usando matrizes
-numéricas internamente, fallback com **Rfast**, backends configuráveis de KNN e
+numéricas internamente, fallback com **Rfast**, engines configuráveis de KNN e
 kernels em **C puro** para partes críticas.
 
 ## Estado da API
@@ -27,7 +27,7 @@ A API foi padronizada com as seguintes regras:
 - Consultas KNN longas são executadas em blocos para que `Ctrl + C` seja
   verificado entre os blocos. Ajuste o tamanho com
   `options(instanceengineering.sby_knn_query_chunk_size = 1000L)`. Para
-  `sby_knn_backend = "RcppHNSW"`, a busca usa blocos menores por padrão
+  `sby_knn_engine = "RcppHNSW"`, a busca usa blocos menores por padrão
   (`options(instanceengineering.sby_hnsw_query_chunk_size = 100L)`). Reduza o
   valor para interrupções mais responsivas ou aumente para menor overhead.
 

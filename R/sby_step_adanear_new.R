@@ -14,9 +14,9 @@
 #' @param sby_audit Indicador logico para retorno de auditoria
 #' @param sby_restore_types Indicador logico para restauracao de tipos
 #' @param sby_knn_algorithm Algoritmo KNN configurado
-#' @param sby_knn_backend Backend KNN configurado
+#' @param sby_knn_engine Engine KNN configurado
+#' @param sby_distance_metric Metrica de distancia KNN configurada
 #' @param sby_knn_workers Numero de workers KNN configurado
-#' @param sby_bioc_neighbor_algorithm Algoritmo BiocNeighbors configurado
 #' @param sby_hnsw_m Conectividade HNSW configurada
 #' @param sby_hnsw_ef Lista dinamica HNSW configurada
 #' @param sby_skip Indicador logico de pulo da etapa
@@ -35,9 +35,9 @@ sby_step_adanear_new <- function(
   sby_audit,
   sby_restore_types,
   sby_knn_algorithm,
-  sby_knn_backend,
+  sby_knn_engine,
+  sby_distance_metric,
   sby_knn_workers,
-  sby_bioc_neighbor_algorithm,
   sby_hnsw_m,
   sby_hnsw_ef,
   sby_skip,
@@ -62,9 +62,9 @@ sby_step_adanear_new <- function(
     sby_audit                   = sby_audit,
     sby_restore_types           = sby_restore_types,
     sby_knn_algorithm           = sby_knn_algorithm,
-    sby_knn_backend             = sby_knn_backend,
+    sby_knn_engine             = sby_knn_engine,
+    sby_distance_metric         = sby_distance_metric,
     sby_knn_workers             = sby_knn_workers,
-    sby_bioc_neighbor_algorithm = sby_bioc_neighbor_algorithm,
     sby_hnsw_m                  = sby_hnsw_m,
     sby_hnsw_ef                 = sby_hnsw_ef,
     sby_skip                    = sby_skip,

@@ -15,7 +15,7 @@ sby_validate_scaling_info <- function(sby_scaling_info, sby_predictor_column_cou
   if(!(is.list(sby_scaling_info) && !is.null(sby_scaling_info$centers) && !is.null(sby_scaling_info$scales))){
 
     # Aborta quando a estrutura de escala esta incompleta
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_precomputed_scaling' deve conter 'centers' e 'scales'"
     )
   }
@@ -24,7 +24,7 @@ sby_validate_scaling_info <- function(sby_scaling_info, sby_predictor_column_cou
   if(length(sby_scaling_info$centers) != sby_predictor_column_count || length(sby_scaling_info$scales) != sby_predictor_column_count){
 
     # Aborta quando ha incompatibilidade dimensional nos parametros de escala
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_precomputed_scaling' deve ter um centro e uma escala por coluna"
     )
   }
@@ -33,7 +33,7 @@ sby_validate_scaling_info <- function(sby_scaling_info, sby_predictor_column_cou
   if(anyNA(sby_scaling_info$centers) || anyNA(sby_scaling_info$scales) || any(!is.finite(sby_scaling_info$centers)) || any(!is.finite(sby_scaling_info$scales))){
 
     # Aborta quando parametros de escala contem valores invalidos
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_precomputed_scaling' contem valores ausentes ou infinitos"
     )
   }
@@ -42,7 +42,7 @@ sby_validate_scaling_info <- function(sby_scaling_info, sby_predictor_column_cou
   if(any(sby_scaling_info$scales <= 0)){
 
     # Aborta quando alguma escala impossibilita padronizacao valida
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_precomputed_scaling$scales' deve conter apenas valores positivos"
     )
   }
