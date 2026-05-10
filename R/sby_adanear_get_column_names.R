@@ -8,7 +8,8 @@
 #'
 #' @return Vetor de nomes de colunas validado ou gerado
 #' @noRd
-sby_over_under_get_column_names <- function(sby_predictor_data){
+sby_adanear_get_column_names <- function(sby_predictor_data){
+  
   # Captura nomes de colunas existentes no objeto de entrada
   sby_names <- colnames(sby_predictor_data)
 

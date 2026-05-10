@@ -8,7 +8,7 @@
 #'
 #' @return Retorna invisivelmente NULL apos emitir o aviso
 #' @noRd
-sby_over_under_warn <- function(sby_message){
+sby_adanear_warn <- function(sby_message){
   # Emite aviso estruturado quando o pacote cli esta disponivel
   if(requireNamespace(
     package = "cli",

@@ -10,6 +10,7 @@
 #' @return Lista com parametros HNSW convertidos para inteiros
 #' @noRd
 sby_validate_hnsw_params <- function(sby_hnsw_m, sby_hnsw_ef){
+  
   # Verifica se a conectividade HNSW e um escalar numerico finito valido
   if(!(is.numeric(sby_hnsw_m) && length(sby_hnsw_m) == 1L && !is.na(sby_hnsw_m) && is.finite(sby_hnsw_m) && sby_hnsw_m >= 2L)){
 

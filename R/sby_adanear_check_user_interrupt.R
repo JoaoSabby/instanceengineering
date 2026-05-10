@@ -6,9 +6,9 @@
 #'
 #' @return Retorna invisivelmente TRUE apos a verificacao de interrupcao
 #' @noRd
-sby_over_under_check_user_interrupt <- function(){
+sby_adanear_check_user_interrupt <- function(){
   # Utiliza rotina nativa de interrupcao quando disponivel
-  if(sby_over_under_native_available()){
+  if(sby_adanear_native_available()){
 
     # Aciona ponto de interrupcao implementado em codigo nativo
     .Call(

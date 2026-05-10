@@ -118,7 +118,8 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse) {
   return out;
 }
 
-SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex, SEXP syntheticPerRow) {
+SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex, SEXP syntheticPerRow){
+  
   require_real_matrix(minorityMatrix, "minorityMatrix");
   if (!isInteger(minorityNeighborIndex) || !isMatrix(minorityNeighborIndex)) {
     error("'minorityNeighborIndex' deve ser uma matrix integer");
@@ -137,6 +138,7 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
   if (neighborRows != minorityRows || XLENGTH(syntheticPerRow) != minorityRows) {
     error("Dimensoes inconsistentes para geracao ADASYN");
   }
+  
   if (neighborCount < 1) {
     error("'minorityNeighborIndex' deve conter ao menos uma coluna");
   }

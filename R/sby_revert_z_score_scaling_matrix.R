@@ -10,8 +10,9 @@
 #' @return Matriz numerica restaurada para a escala original
 #' @noRd
 sby_revert_z_score_scaling_matrix <- function(sby_x_matrix, sby_scaling_info){
+  
   # Normaliza entrada para matriz numerica de precisao dupla
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_x_matrix
   )
 
@@ -22,7 +23,7 @@ sby_revert_z_score_scaling_matrix <- function(sby_x_matrix, sby_scaling_info){
   )
 
   # Aplica implementacao nativa quando disponivel
-  if(sby_over_under_native_available()){
+  if(sby_adanear_native_available()){
 
     # Reverte z-score por chamada nativa registrada no pacote
     sby_restored <- .Call(

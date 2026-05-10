@@ -1,4 +1,4 @@
-#' Construtor interno de sby_step_balance
+#' Construtor interno de sby_step_adanear
 #'
 #' @details
 #' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
@@ -24,7 +24,7 @@
 #'
 #' @return Objeto de etapa recipes configurado
 #' @noRd
-sby_step_balance_new <- function(
+sby_step_adanear_new <- function(
   sby_terms,
   sby_role,
   sby_trained,
@@ -43,9 +43,10 @@ sby_step_balance_new <- function(
   sby_skip,
   sby_id
 ){
+  
   # Constroi objeto de etapa recipes com metadados internos de balanceamento
   return(recipes::step(
-    subclass                    = "sby_step_balance",
+    subclass                    = "sby_step_adanear",
     terms                       = sby_terms,
     role                        = sby_role,
     trained                     = sby_trained,

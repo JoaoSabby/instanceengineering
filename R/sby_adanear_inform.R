@@ -8,7 +8,8 @@
 #'
 #' @return Retorna invisivelmente NULL apos emitir a mensagem
 #' @noRd
-sby_over_under_inform <- function(sby_message){
+sby_adanear_inform <- function(sby_message){
+  
   # Emite mensagem estruturada quando o pacote cli esta disponivel
   if(requireNamespace(
     package = "cli",

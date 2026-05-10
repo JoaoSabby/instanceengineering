@@ -9,6 +9,7 @@
 #' @return Lista com contagens e rotulos das classes minoritaria e majoritaria
 #' @noRd
 sby_get_binary_class_roles <- function(sby_target_factor){
+  
   # Calcula distribuicao de frequencias por classe
   sby_class_counts <- table(
     sby_target_factor
@@ -18,7 +19,7 @@ sby_get_binary_class_roles <- function(sby_target_factor){
   if(length(sby_class_counts) != 2L){
 
     # Aborta quando o alvo nao e binario
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_target_vector' deve ser binario"
     )
   }
@@ -27,7 +28,7 @@ sby_get_binary_class_roles <- function(sby_target_factor){
   if(sby_class_counts[[1L]] == sby_class_counts[[2L]]){
 
     # Aborta quando a rotina de balanceamento nao tem classe majoritaria definida
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "As rotinas de sampling requerem classes desbalanceadas"
     )
   }

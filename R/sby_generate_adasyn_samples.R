@@ -29,6 +29,7 @@ sby_generate_adasyn_samples <- function(
   sby_hnsw_m,
   sby_hnsw_ef
 ){
+  
   # Identifica papeis de classe para localizar a minoria
   sby_class_roles <- sby_get_binary_class_roles(
     sby_target_factor = sby_target_factor
@@ -58,7 +59,7 @@ sby_generate_adasyn_samples <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos a primeira consulta KNN
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Remove o proprio ponto dos vizinhos quando ha vizinhos suficientes
   sby_neighbor_index <- sby_all_neighbor_result$nn.index
@@ -82,7 +83,7 @@ sby_generate_adasyn_samples <- function(
   sby_majority_mask <- sby_target_factor[as.vector(sby_neighbor_index)] == sby_class_roles$sby_majority_label
 
   # Verifica se ha solicitacao de interrupcao antes do calculo de razoes
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Calcula proporcao de vizinhos majoritarios por linha minoritaria
   sby_majority_ratio <- rowMeans(matrix(
@@ -92,7 +93,7 @@ sby_generate_adasyn_samples <- function(
   ))
 
   # Verifica se ha solicitacao de interrupcao antes da ponderacao de geracao
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Define pesos de geracao a partir da dificuldade local da minoria
   if(sum(sby_majority_ratio) <= 0){
@@ -144,7 +145,7 @@ sby_generate_adasyn_samples <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos a consulta KNN minoritaria
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Remove autorreferencias dos vizinhos minoritarios quando possivel
   sby_minority_neighbor_index <- sby_minority_neighbor_result$nn.index
@@ -165,7 +166,7 @@ sby_generate_adasyn_samples <- function(
   }
 
   # Gera amostras sinteticas por rotina nativa quando disponivel
-  if(sby_over_under_native_available()){
+  if(sby_adanear_native_available()){
 
     # Garante modos de armazenamento esperados pela rotina nativa
     storage.mode(sby_minority_matrix)         <- "double"
@@ -181,7 +182,7 @@ sby_generate_adasyn_samples <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao apos geracao nativa
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
   }else{
 
     # Inicializa matriz sintetica e ponteiros de escrita para geracao em R
@@ -198,7 +199,7 @@ sby_generate_adasyn_samples <- function(
     # Gera amostras sinteticas por interpolacao nas linhas positivas
     for(i in sby_positive_rows){
       # Verifica interrupcao a cada linha minoritaria sintetizada
-      sby_over_under_check_user_interrupt()
+      sby_adanear_check_user_interrupt()
 
       # Calcula intervalo de escrita para a linha minoritaria corrente
       sby_row_count   <- sby_synthetic_per_row[[i]]

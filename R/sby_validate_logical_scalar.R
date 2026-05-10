@@ -10,6 +10,7 @@
 #' @return Valor logico validado sem alteracoes
 #' @noRd
 sby_validate_logical_scalar <- function(sby_value, sby_name){
+  
   # Verifica se o valor informado representa um escalar logico nao ausente
   if(!(is.logical(sby_value) && length(sby_value) == 1L && !is.na(sby_value))){
 

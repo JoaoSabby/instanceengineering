@@ -10,6 +10,7 @@
 #' @return Objeto de parametros BiocNeighbors para consulta KNN
 #' @noRd
 sby_create_bioc_neighbor_param <- function(sby_bioc_neighbor_algorithm, sby_predictor_column_count){
+  
   # Resolve algoritmo BiocNeighbors automatico por dimensionalidade
   if(identical(
     x = sby_bioc_neighbor_algorithm,
@@ -32,7 +33,7 @@ sby_create_bioc_neighbor_param <- function(sby_bioc_neighbor_algorithm, sby_pred
     Exhaustive = BiocNeighbors::ExhaustiveParam(),
     Annoy = BiocNeighbors::AnnoyParam(),
     Hnsw = BiocNeighbors::HnswParam(),
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_bioc_neighbor_algorithm' invalido"
     )
   ))

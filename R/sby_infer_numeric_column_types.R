@@ -9,13 +9,14 @@
 #' @return Data frame com nomes de colunas e tipos numericos inferidos
 #' @noRd
 sby_infer_numeric_column_types <- function(sby_data_frame){
+  
   # Converte dados de entrada para matriz numerica padronizada
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_data_frame
   )
 
   # Captura nomes de colunas associados aos preditores
-  sby_column_names <- sby_over_under_get_column_names(
+  sby_column_names <- sby_adanear_get_column_names(
     sby_predictor_data = sby_data_frame
   )
 

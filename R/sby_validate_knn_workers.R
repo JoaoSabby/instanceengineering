@@ -9,6 +9,7 @@
 #' @return Numero inteiro positivo de workers validado
 #' @noRd
 sby_validate_knn_workers <- function(sby_knn_workers){
+  
   # Verifica se a quantidade de workers e um escalar numerico positivo finito
   if(!(is.numeric(sby_knn_workers) && length(sby_knn_workers) == 1L && !is.na(sby_knn_workers) && is.finite(sby_knn_workers) && sby_knn_workers >= 1L)){
 

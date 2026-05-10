@@ -6,7 +6,7 @@
 #' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
 #'
 #' @description
-#' `sby_step_balance()` adiciona uma etapa de balanceamento para recipes/tidymodels
+#' `sby_step_adanear()` adiciona uma etapa de balanceamento para recipes/tidymodels
 #' A etapa executa `sby_nearmiss()` e, por padrao,
 #' e pulada em novos dados (`sby_skip = TRUE`), pois altera o numero de linhas
 #'
@@ -31,7 +31,7 @@
 #'
 #' @return Objeto recipe com a etapa de balanceamento adicionada
 #' @export
-sby_step_balance <- function(
+sby_step_adanear <- function(
   sby_recipe,
   ...,
   sby_role = NA,
@@ -51,12 +51,13 @@ sby_step_balance <- function(
   sby_skip = TRUE,
   sby_id = recipes::rand_id("balance")
 ){
+  
   # Verifica se ha solicitacao de interrupcao antes de configurar a etapa
   sby_over_under_check_user_interrupt()
 
   # Valida dependencias declaradas para a etapa recipes
   recipes::recipes_pkg_check(
-    required_pkgs.step_sby_step_balance()
+    required_pkgs.step_sby_step_adanear()
   )
 
   # Captura seletores de desfecho informados pelo chamador
@@ -99,7 +100,7 @@ sby_step_balance <- function(
   # Adiciona etapa configurada ao objeto recipe
   return(recipes::add_step(
     object = sby_recipe,
-    step = sby_step_balance_new(
+    step = sby_step_adanear_new(
       sby_terms                   = sby_terms,
       sby_role                    = sby_role,
       sby_trained                 = sby_trained,

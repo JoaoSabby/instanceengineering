@@ -8,7 +8,7 @@
 #'
 #' @return Matriz numerica com nomes de colunas preservados
 #' @noRd
-sby_over_under_as_numeric_matrix <- function(sby_predictor_data){
+sby_adanear_as_numeric_matrix <- function(sby_predictor_data){
   # Converte a entrada para matriz quando os preditores estao em data frame
   if(is.data.frame(sby_predictor_data)){
 
@@ -28,7 +28,7 @@ sby_over_under_as_numeric_matrix <- function(sby_predictor_data){
   storage.mode(sby_x_matrix) <- "double"
 
   # Preserva nomes de colunas existentes ou gerados para a matriz numerica
-  colnames(sby_x_matrix) <- sby_over_under_get_column_names(
+  colnames(sby_x_matrix) <- sby_adanear_get_column_names(
     sby_predictor_data = sby_predictor_data
   )
 

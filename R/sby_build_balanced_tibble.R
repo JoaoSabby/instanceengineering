@@ -10,11 +10,12 @@
 #' @return Tibble com preditores e coluna TARGET
 #' @noRd
 sby_build_balanced_tibble <- function(sby_predictor_data, sby_target_vector){
+  
   # Verifica se nome reservado de alvo ja existe nos preditores
   if("TARGET" %in% names(sby_predictor_data)){
 
     # Aborta para evitar sobrescrita ambigua da coluna de alvo
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_predictor_data' nao pode conter coluna chamada TARGET"
     )
   }

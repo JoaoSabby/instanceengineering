@@ -5,26 +5,27 @@
 #' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
 #' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
 #'
-#' @param object Objeto de etapa `sby_step_balance` treinado
+#' @param object Objeto de etapa `sby_step_adanear` treinado
 #' @param new_data Dados novos fornecidos ao `bake()` da recipe
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
 #' @return Tibble balanceado ou lista de auditoria quando configurado
 #' @export
-bake.step_sby_step_balance <- function(object, new_data, ...){
+bake.step_sby_step_adanear <- function(object, new_data, ...){
+  
   # Normaliza argumentos S3 para nomes internos do pacote
   sby_object   <- object
   sby_new_data <- new_data
 
   # Verifica se ha solicitacao de interrupcao antes do balanceamento
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Verifica se a etapa foi treinada antes de aplicar bake
   if(!isTRUE(sby_object$sby_trained)){
 
     # Aborta quando a etapa nao passou por prep
-    sby_over_under_abort(
-      sby_message = "'sby_step_balance()' precisa ser treinado com prep() antes de bake()"
+    sby_adanear_abort(
+      sby_message = "'sby_step_adanear()' precisa ser treinado com prep() antes de bake()"
     )
   }
 
@@ -35,7 +36,7 @@ bake.step_sby_step_balance <- function(object, new_data, ...){
   if(!sby_target_column %in% names(sby_new_data)){
 
     # Aborta quando o desfecho selecionado esta ausente em new_data
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = paste0(
         "Coluna de desfecho nao encontrada em 'new_data': ",
         sby_target_column
@@ -54,8 +55,8 @@ bake.step_sby_step_balance <- function(object, new_data, ...){
   if(length(sby_predictor_names) < 1L){
 
     # Aborta quando apenas o desfecho esta disponivel
-    sby_over_under_abort(
-      sby_message = "'sby_step_balance()' requer ao menos uma coluna preditora"
+    sby_adanear_abort(
+      sby_message = "'sby_step_adanear()' requer ao menos uma coluna preditora"
     )
   }
 
@@ -79,7 +80,7 @@ bake.step_sby_step_balance <- function(object, new_data, ...){
   )
 
   # Verifica se ha solicitacao de interrupcao apos o balanceamento
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Retorna auditoria completa quando configurado na etapa
   if(isTRUE(sby_object$sby_audit)){

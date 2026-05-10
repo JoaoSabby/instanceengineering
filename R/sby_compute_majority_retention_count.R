@@ -10,11 +10,12 @@
 #' @return Quantidade inteira de linhas majoritarias a manter
 #' @noRd
 sby_compute_majority_retention_count <- function(sby_target_factor, sby_under_ratio){
+  
   # Verifica se a fracao de retencao esta no intervalo permitido
   if(!(is.numeric(sby_under_ratio) && length(sby_under_ratio) == 1L && !is.na(sby_under_ratio) && sby_under_ratio > 0 && sby_under_ratio <= 1)){
 
     # Aborta quando a fracao de undersampling e invalida
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_under_ratio' deve estar no intervalo (0, 1]"
     )
   }
@@ -30,7 +31,7 @@ sby_compute_majority_retention_count <- function(sby_target_factor, sby_under_ra
   if(sby_retained_count < 1L){
 
     # Aborta quando a configuracao removeria toda a classe majoritaria
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_under_ratio' reteve zero linhas"
     )
   }

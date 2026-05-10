@@ -1,10 +1,10 @@
-\name{sby_step_balance}
-\alias{sby_step_balance}
-\alias{prep.step_sby_step_balance}
-\alias{bake.step_sby_step_balance}
-\alias{tidy.step_sby_step_balance}
-\alias{print.step_sby_step_balance}
-\alias{required_pkgs.step_sby_step_balance}
+\name{sby_step_adanear}
+\alias{sby_step_adanear}
+\alias{prep.step_sby_step_adanear}
+\alias{bake.step_sby_step_adanear}
+\alias{tidy.step_sby_step_adanear}
+\alias{print.step_sby_step_adanear}
+\alias{required_pkgs.step_sby_step_adanear}
 \title{Balance binary classes in recipes with NearMiss-1}
 \description{
 Adds a recipes/tidymodels step that runs \code{sby_nearmiss()}
@@ -12,7 +12,7 @@ during recipe processing. The step changes the number of rows and therefore
 defaults to \code{sby_skip = TRUE} for new data.
 }
 \usage{
-sby_step_balance(
+sby_step_adanear(
   sby_recipe,
   ...,
   sby_role = NA,
@@ -53,13 +53,13 @@ sby_step_balance(
 \item{sby_id}{Unique step identifier.}
 }
 \value{
-A recipe with an added \code{sby_step_balance} step. When baked with
+A recipe with an added \code{sby_step_adanear} step. When baked with
 \code{sby_audit = FALSE}, the output is a tibble with the \code{TARGET} outcome column first.
 When baked with \code{sby_audit = TRUE}, the output is the audit list.
 }
 \details{
 Select the binary outcome in \code{...}, for example
-\code{sby_step_balance(sby_recipe, y)}. All remaining columns are passed to
+\code{sby_step_adanear(sby_recipe, y)}. All remaining columns are passed to
 \code{sby_nearmiss()} as numeric predictors, so categorical
 predictors should be encoded by earlier recipe steps when needed.
 }
@@ -67,6 +67,6 @@ predictors should be encoded by earlier recipe steps when needed.
 if (requireNamespace("recipes", quietly = TRUE)) {
   set.seed(1)
   sby_dat <- data.frame(sby_a = rnorm(40), sby_b = rnorm(40), y = factor(c(rep("no", 30), rep("yes", 10))))
-  sby_rec <- sby_step_balance(recipes::recipe(y ~ ., data = sby_dat), y, sby_under_ratio = 0.8)
+  sby_rec <- sby_step_adanear(recipes::recipe(y ~ ., data = sby_dat), y, sby_under_ratio = 0.8)
 }
 }

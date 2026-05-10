@@ -10,6 +10,7 @@
 #' @return Retorna invisivelmente TRUE quando os parametros sao validos
 #' @noRd
 sby_validate_scaling_info <- function(sby_scaling_info, sby_predictor_column_count){
+  
   # Verifica se os componentes obrigatorios de escala estao presentes
   if(!(is.list(sby_scaling_info) && !is.null(sby_scaling_info$centers) && !is.null(sby_scaling_info$scales))){
 

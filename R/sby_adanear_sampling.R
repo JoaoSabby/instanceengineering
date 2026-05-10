@@ -43,7 +43,7 @@ sby_adanear <- function(
   sby_hnsw_ef = 200L
 ){
   # Verifica se ha solicitacao de interrupcao pelo usuario
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Valida parametros logicos escalares de controle operacional
   sby_audit <- sby_validate_logical_scalar(
@@ -108,7 +108,7 @@ sby_adanear <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos sobreamostragem
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Executa subamostragem NearMiss reutilizando escala e tipos inferidos
   sby_under_result <- sby_nearmiss(
@@ -131,7 +131,7 @@ sby_adanear <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos subamostragem
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Define metadado do algoritmo BiocNeighbors usado no diagnostico
   sby_diagnostic_bioc_neighbor_algorithm <- ifelse(

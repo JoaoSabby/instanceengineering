@@ -11,8 +11,9 @@
 #' @return Matriz ou data frame com tipos numericos restaurados
 #' @noRd
 sby_restore_numeric_column_types <- function(sby_x_matrix, sby_type_info, sby_as_data_frame = TRUE){
+  
   # Converte dados de entrada para matriz numerica padronizada
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_x_matrix
   )
 
@@ -20,7 +21,7 @@ sby_restore_numeric_column_types <- function(sby_x_matrix, sby_type_info, sby_as
   if(NCOL(sby_x_matrix) != nrow(sby_type_info)){
 
     # Aborta quando os metadados nao correspondem as colunas da matriz
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "Inconsistencia entre numero de colunas e sby_type_info"
     )
   }
@@ -31,7 +32,7 @@ sby_restore_numeric_column_types <- function(sby_x_matrix, sby_type_info, sby_as
     if(j %% 64L == 1L){
 
       # Executa ponto cooperativo de interrupcao
-      sby_over_under_check_user_interrupt()
+      sby_adanear_check_user_interrupt()
     }
 
     # Recupera o tipo inferido para a coluna corrente
@@ -81,7 +82,7 @@ sby_restore_numeric_column_types <- function(sby_x_matrix, sby_type_info, sby_as
     if(j %% 64L == 1L){
 
       # Executa ponto cooperativo de interrupcao
-      sby_over_under_check_user_interrupt()
+      sby_adanear_check_user_interrupt()
     }
 
     # Recupera o tipo inferido para a coluna corrente

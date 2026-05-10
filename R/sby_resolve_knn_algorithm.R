@@ -10,6 +10,7 @@
 #' @return Nome do algoritmo KNN resolvido
 #' @noRd
 sby_resolve_knn_algorithm <- function(sby_knn_algorithm, sby_predictor_column_count){
+  
   # Retorna algoritmo explicito quando modo automatico nao foi solicitado
   if(!identical(
     x = sby_knn_algorithm,

@@ -6,9 +6,10 @@
 #'
 #' @return Retorna invisivelmente TRUE apos validar dependencias
 #' @noRd
-sby_over_under_load_packages <- function(){
+sby_adanear_load_packages <- function(){
+  
   # Evita recarregar dependencias ja validadas na sessao
-  if(isTRUE(sby_over_under_state$sby_packages_loaded)){
+  if(isTRUE(sby_adanear_state$sby_packages_loaded)){
 
     # Retorna sucesso quando o estado global ja indica dependencias carregadas
     return(invisible(TRUE))
@@ -29,7 +30,7 @@ sby_over_under_load_packages <- function(){
     )){
 
       # Aborta informando a dependencia ausente
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = paste0(
           "Pacote necessario nao encontrado: ",
           sby_package_name
@@ -39,7 +40,7 @@ sby_over_under_load_packages <- function(){
   }
 
   # Registra que as dependencias foram validadas na sessao
-  sby_over_under_state$sby_packages_loaded <- TRUE
+  sby_adanear_state$sby_packages_loaded <- TRUE
 
   # Retorna sucesso invisivel apos carregamento das dependencias
   return(invisible(TRUE))

@@ -29,8 +29,9 @@ sby_get_knnx <- function(
   sby_hnsw_ef,
   sby_knn_query_chunk_size = getOption("instanceengineering.sby_knn_query_chunk_size", 1000L)
 ){
+  
   # Verifica se ha solicitacao de interrupcao antes da consulta KNN
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Valida tamanho de bloco para consultas KNN interrompiveis
   sby_knn_query_chunk_size <- sby_validate_knn_query_chunk_size(
@@ -50,7 +51,7 @@ sby_get_knnx <- function(
     )){
 
       # Aborta quando o backend FNN nao esta instalado
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = "'sby_knn_backend = FNN' requer o pacote FNN"
       )
     }
@@ -72,7 +73,7 @@ sby_get_knnx <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao apos consulta FNN
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Retorna resultado KNN produzido pelo backend FNN
     return(sby_knn_result)
@@ -91,7 +92,7 @@ sby_get_knnx <- function(
     )){
 
       # Aborta quando o backend RcppHNSW nao esta instalado
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = "'sby_knn_backend = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW')."
       )
     }
@@ -118,7 +119,7 @@ sby_get_knnx <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao apos construcao do indice HNSW
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Valida tamanho de bloco especifico para consultas HNSW
     sby_hnsw_query_chunk_size <- sby_validate_knn_query_chunk_size(
@@ -155,7 +156,7 @@ sby_get_knnx <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao apos consulta HNSW
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Retorna resultado KNN produzido pelo backend HNSW
     return(sby_knn_result)
@@ -171,7 +172,7 @@ sby_get_knnx <- function(
   )){
 
     # Aborta quando dependencias do backend BiocNeighbors estao ausentes
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_knn_backend = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel'))."
     )
   }
@@ -195,7 +196,7 @@ sby_get_knnx <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos consulta BiocNeighbors
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Retorna indices e distancias no contrato comum de KNN
   return(list(
@@ -250,7 +251,7 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
   # Processa consultas KNN em blocos sequenciais
   for(sby_chunk_start in sby_chunk_starts){
     # Verifica interrupcao antes de cada bloco de consulta
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Define intervalo de linhas do bloco corrente
     sby_chunk_end   <- min(
@@ -272,7 +273,7 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
     sby_nn_dist[sby_chunk_index, ]  <- sby_chunk_result$nn.dist
 
     # Verifica interrupcao apos cada bloco de consulta
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
   }
 
   # Retorna matrizes completas de indices e distancias

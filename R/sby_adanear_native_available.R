@@ -6,7 +6,7 @@
 #'
 #' @return Valor logico indicando se rotinas nativas podem ser chamadas
 #' @noRd
-sby_over_under_native_available <- function(){
+sby_adanear_native_available <- function(){
   # Verifica se a DLL do pacote esta registrada na sessao atual
   return(is.loaded(
     symbol = "OU_ApplyZScoreC",

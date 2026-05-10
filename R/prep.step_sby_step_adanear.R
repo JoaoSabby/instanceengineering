@@ -5,21 +5,22 @@
 #' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
 #' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
 #'
-#' @param x Objeto de etapa `sby_step_balance` nao treinado
+#' @param x Objeto de etapa `sby_step_adanear` nao treinado
 #' @param training Dados de treinamento usados pelo `prep()`
 #' @param info Metadados opcionais de variaveis fornecidos por recipes
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
-#' @return Objeto de etapa `sby_step_balance` treinado
+#' @return Objeto de etapa `sby_step_adanear` treinado
 #' @export
-prep.step_sby_step_balance <- function(x, training, info = NULL, ...){
+prep.step_sby_step_adanear <- function(x, training, info = NULL, ...){
+  
   # Normaliza argumentos S3 para nomes internos do pacote
   sby_x        <- x
   sby_training <- training
   sby_info     <- info
 
   # Verifica se ha solicitacao de interrupcao antes da selecao de colunas
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Avalia seletores recipes para identificar coluna de desfecho
   sby_selected_columns <- recipes::recipes_eval_select(
@@ -32,13 +33,13 @@ prep.step_sby_step_balance <- function(x, training, info = NULL, ...){
   if(length(sby_selected_columns) != 1L){
 
     # Aborta quando a selecao do desfecho nao e univoca
-    sby_over_under_abort(
-      sby_message = "'sby_step_balance()' deve selecionar exatamente uma coluna de desfecho"
+    sby_adanear_abort(
+      sby_message = "'sby_step_adanear()' deve selecionar exatamente uma coluna de desfecho"
     )
   }
 
   # Retorna nova etapa marcada como treinada com a coluna selecionada
-  return(sby_step_balance_new(
+  return(sby_step_adanear_new(
     sby_terms                   = sby_x$sby_terms,
     sby_role                    = sby_x$sby_role,
     sby_trained                 = TRUE,

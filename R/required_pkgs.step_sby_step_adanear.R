@@ -10,7 +10,7 @@
 #'
 #' @return Vetor de nomes dos pacotes requeridos
 #' @export
-required_pkgs.step_sby_step_balance <- function(x, ...){
+required_pkgs.step_sby_step_adanear <- function(x, ...){
   # Retorna dependencias necessarias para execucao da etapa recipes
   return(c(
     "instanceengineering",

@@ -8,7 +8,8 @@
 #'
 #' @return Interrompe a execucao com erro padronizado
 #' @noRd
-sby_over_under_abort <- function(sby_message){
+sby_adanear_abort <- function(sby_message){
+  
   # Emite erro estruturado quando o pacote cli esta disponivel
   if(requireNamespace(
     package = "cli",

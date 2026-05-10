@@ -63,7 +63,7 @@ sby_nearmiss(
   sby_audit = FALSE
 )
 
-sby_step_balance(
+sby_step_adanear(
   sby_recipe,
   ...,
   sby_under_ratio = 0.5,

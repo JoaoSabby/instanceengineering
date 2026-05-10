@@ -9,13 +9,14 @@
 #' @return Lista com vetores numericos `centers` e `scales`
 #' @noRd
 sby_compute_z_score_params <- function(sby_x_matrix){
+  
   # Normaliza entrada para matriz numerica de precisao dupla
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_x_matrix
   )
 
   # Calcula parametros por rotina nativa quando disponivel
-  if(sby_over_under_native_available()){
+  if(sby_adanear_native_available()){
 
     # Estima centros e escalas por chamada nativa registrada no pacote
     sby_params <- .Call(
@@ -55,7 +56,7 @@ sby_compute_z_score_params <- function(sby_x_matrix){
     }
 
     # Aborta informando colunas com escala indefinida
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = paste0(
         "Colunas com desvio padrao zero ou indefinido: ",
         paste(

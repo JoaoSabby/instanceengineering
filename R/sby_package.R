@@ -16,12 +16,12 @@
 NULL
 
 # Inicializa ambiente interno de estado do pacote
-sby_over_under_state <- new.env(
+sby_adanear_state <- new.env(
   parent = emptyenv()
 )
 
 # Registra estado inicial de dependencias ainda nao validadas
-sby_over_under_state$sby_packages_loaded <- FALSE
+sby_adanear_state$sby_packages_loaded <- FALSE
 ####
 ## Fim
 #

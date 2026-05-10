@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
   && rm -rf /var/lib/apt/lists/*
 
-RUN Rscript -e 'install.packages(c("cli", "FNN", "generics", "recipes", "rlang", "Rfast", "tibble"), repos = "https://cloud.r-project.org")'
+RUN Rscript -e 'install.packages(c("RcppHNSW", "cli", "FNN", "generics", "recipes", "rlang", "Rfast", "tibble"), repos = "https://cloud.r-project.org")'
 
 WORKDIR /workspace/instance_engineering
 

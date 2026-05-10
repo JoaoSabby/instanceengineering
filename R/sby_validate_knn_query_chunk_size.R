@@ -9,6 +9,7 @@
 #' @return Tamanho de bloco inteiro positivo validado
 #' @noRd
 sby_validate_knn_query_chunk_size <- function(sby_knn_query_chunk_size){
+  
   # Define tamanho padrao quando o valor informado e nulo
   if(is.null(sby_knn_query_chunk_size)){
 

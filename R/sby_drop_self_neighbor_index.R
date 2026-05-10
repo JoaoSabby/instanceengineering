@@ -24,7 +24,7 @@ sby_drop_self_neighbor_index <- function(sby_neighbor_index, sby_self_index, sby
     if(i %% 1024L == 1L){
 
       # Executa ponto cooperativo de interrupcao
-      sby_over_under_check_user_interrupt()
+      sby_adanear_check_user_interrupt()
     }
 
     # Filtra candidatos validos diferentes do indice da propria linha
@@ -35,7 +35,7 @@ sby_drop_self_neighbor_index <- function(sby_neighbor_index, sby_self_index, sby
     if(length(sby_candidates) < sby_desired_k){
 
       # Aborta quando nao e possivel manter a quantidade desejada de vizinhos
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = "Nao foi possivel remover o proprio ponto mantendo vizinhos suficientes"
       )
     }

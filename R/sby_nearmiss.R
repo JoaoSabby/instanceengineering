@@ -46,7 +46,7 @@ sby_nearmiss <- function(
 ){
   
   # Verifica se ha solicitacao de interrupcao pelo usuario
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Valida parametros logicos escalares de controle operacional
   sby_audit <- sby_validate_logical_scalar(
@@ -107,17 +107,17 @@ sby_nearmiss <- function(
   if(!is.numeric(sby_k_under) || length(sby_k_under) != 1L || is.na(sby_k_under) || sby_k_under < 1L){
 
     # Aborta quando o parametro NearMiss nao representa inteiro positivo
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_k_under' deve ser inteiro positivo"
     )
   }
 
   # Converte os preditores para matriz numerica com nomes preservados
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_predictor_data
   )
   
-  colnames(sby_x_matrix) <- sby_over_under_get_column_names(
+  colnames(sby_x_matrix) <- sby_adanear_get_column_names(
     sby_predictor_data = sby_predictor_data
   )
 
@@ -151,7 +151,7 @@ sby_nearmiss <- function(
   if(NCOL(sby_x_matrix) != nrow(sby_type_info)){
 
     # Aborta quando os metadados nao cobrem todas as colunas preditoras
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_type_info' deve ter uma linha por coluna de 'sby_predictor_data'"
     )
   }
@@ -163,7 +163,7 @@ sby_nearmiss <- function(
     if(is.null(sby_precomputed_scaling)){
 
       # Aborta quando nao ha referencia para restauracao da escala original
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = "'sby_precomputed_scaling' e obrigatorio quando 'sby_input_already_scaled = TRUE'"
       )
     }
@@ -203,7 +203,7 @@ sby_nearmiss <- function(
   }
 
   # Verifica se ha solicitacao de interrupcao antes do calculo principal
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Calcula distribuicao de classes para decidir se ha desbalanceamento
   sby_class_counts <- table(
@@ -253,7 +253,7 @@ sby_nearmiss <- function(
     if(sby_effective_k < 1L){
 
       # Aborta quando o conjunto minoritario nao possui linhas elegiveis
-      sby_over_under_abort(
+      sby_adanear_abort(
         sby_message = "Sem linhas minoritarias suficientes para NearMiss"
       )
     }
@@ -277,7 +277,7 @@ sby_nearmiss <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao apos calculo KNN
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Ordena exemplos majoritarios pelo criterio NearMiss de distancia media
     sby_mean_distances <- rowMeans(
@@ -285,7 +285,7 @@ sby_nearmiss <- function(
     )
 
     # Verifica se ha solicitacao de interrupcao antes da selecao final
-    sby_over_under_check_user_interrupt()
+    sby_adanear_check_user_interrupt()
 
     # Seleciona indices majoritarios mais proximos e compoe conjunto retido
     sby_selected_order <- order(

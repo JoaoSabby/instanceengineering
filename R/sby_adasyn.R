@@ -40,8 +40,9 @@ sby_adasyn <- function(
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
 ){
+  
   # Verifica se ha solicitacao de interrupcao pelo usuario
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Valida parametros logicos escalares de controle operacional
   sby_audit <- sby_validate_logical_scalar(
@@ -92,16 +93,16 @@ sby_adasyn <- function(
   if(!(is.numeric(sby_k_over) && length(sby_k_over) == 1L && !is.na(sby_k_over) && sby_k_over >= 1L)){
 
     # Aborta quando o parametro ADASYN nao representa inteiro positivo
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_k_over' deve ser inteiro positivo"
     )
   }
 
   # Converte preditores e preserva nomes de colunas para o processamento matricial
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+  sby_x_matrix <- sby_adanear_as_numeric_matrix(
     sby_predictor_data = sby_predictor_data
   )
-  colnames(sby_x_matrix) <- sby_over_under_get_column_names(
+  colnames(sby_x_matrix) <- sby_adanear_get_column_names(
     sby_predictor_data = sby_predictor_data
   )
 
@@ -131,7 +132,7 @@ sby_adasyn <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao antes da geracao sintetica
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Calcula quantidade de amostras sinteticas a gerar
   sby_synthetic_count <- sby_compute_minority_expansion_count(
@@ -159,7 +160,7 @@ sby_adasyn <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos a geracao sintetica
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Restaura nomes de colunas e escala original dos preditores expandidos
   colnames(sby_adasyn_result$x) <- colnames(sby_x_matrix)
@@ -169,7 +170,7 @@ sby_adasyn <- function(
   )
 
   # Verifica se ha solicitacao de interrupcao apos reversao de escala
-  sby_over_under_check_user_interrupt()
+  sby_adanear_check_user_interrupt()
 
   # Define preditores finais com ou sem restauracao dos tipos originais
   sby_final_predictors <- if(sby_restore_types){

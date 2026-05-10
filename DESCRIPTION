@@ -28,9 +28,9 @@ ByteCompile: true
 Depends:
     R (>= 4.0.0)
 Imports:
-    cli,
     RcppHNSW,
     FNN,
+    cli,
     generics,
     recipes,
     rlang,

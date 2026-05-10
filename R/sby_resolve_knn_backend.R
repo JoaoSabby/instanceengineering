@@ -10,6 +10,7 @@
 #' @return Nome do backend KNN resolvido
 #' @noRd
 sby_resolve_knn_backend <- function(sby_knn_backend, sby_knn_workers){
+  
   # Retorna backend explicito quando modo automatico nao foi solicitado
   if(!identical(
     x = sby_knn_backend,

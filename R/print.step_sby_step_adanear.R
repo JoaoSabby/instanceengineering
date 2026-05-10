@@ -5,13 +5,14 @@
 #' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
 #' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
 #'
-#' @param x Objeto de etapa `sby_step_balance`
+#' @param x Objeto de etapa `sby_step_adanear`
 #' @param width Largura de exibicao usada pelo metodo de impressao
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
 #' @return Retorna invisivelmente o objeto de etapa informado
 #' @export
-print.step_sby_step_balance <- function(x, width = max(20, options()$width - 30), ...){
+print.step_sby_step_adanear <- function(x, width = max(20, options()$width - 30), ...){
+  
   # Normaliza argumentos S3 para nomes internos do pacote
   sby_x     <- x
   sby_width <- width

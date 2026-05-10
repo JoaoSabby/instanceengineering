@@ -5,12 +5,13 @@
 #' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
 #' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
 #'
-#' @param x Objeto de etapa `sby_step_balance`
+#' @param x Objeto de etapa `sby_step_adanear`
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
 #' @return Data frame com metadados principais da etapa
 #' @export
-tidy.step_sby_step_balance <- function(x, ...){
+tidy.step_sby_step_adanear <- function(x, ...){
+  
   # Normaliza argumento S3 para nome interno do pacote
   sby_x <- x
 
