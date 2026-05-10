@@ -1,11 +1,16 @@
 
 #' Verificar interrupcao solicitada pelo usuario
 #' @noRd
+<<<<<<< HEAD
+sby_over_under_check_user_interrupt <- function() {
+  if (sby_over_under_native_available()) {
+=======
 # Executa instrucao do fluxo preservado
 sby_over_under_check_user_interrupt <- function() {
   # Executa instrucao do fluxo preservado
   if (sby_over_under_native_available()) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     .Call("OU_CheckUserInterruptC", PACKAGE = "instanceengineering")
   # Executa instrucao do fluxo preservado
   } else {

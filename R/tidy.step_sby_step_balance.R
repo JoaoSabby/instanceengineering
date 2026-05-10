@@ -1,5 +1,14 @@
 
 #' @export
+<<<<<<< HEAD
+tidy.step_sby_step_balance <- function(x, ...) {
+  sby_x <- x
+  if (isTRUE(sby_x$sby_trained)) {
+    sby_terms <- sby_x$sby_columns
+  } else {
+    sby_terms <- recipes::sel2char(sby_x$sby_terms)
+  }
+=======
 # Executa instrucao do fluxo preservado
 tidy.step_sby_step_balance <- function(x, ...) {
   # Executa instrucao do fluxo preservado
@@ -7,6 +16,7 @@ tidy.step_sby_step_balance <- function(x, ...) {
   # Executa instrucao do fluxo preservado
   sby_terms <- if (isTRUE(sby_x$sby_trained)) sby_x$sby_columns else recipes::sel2char(sby_x$sby_terms)
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   data.frame(
     # Executa instrucao do fluxo preservado
     sby_terms = sby_terms,

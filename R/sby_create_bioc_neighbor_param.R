@@ -1,6 +1,15 @@
 
 #' Criar parametro BiocNeighbors para busca exata por padrao
 #' @noRd
+<<<<<<< HEAD
+sby_create_bioc_neighbor_param <- function(sby_bioc_neighbor_algorithm, sby_predictor_column_count) {
+  if (identical(sby_bioc_neighbor_algorithm, "auto")) {
+    sby_bioc_neighbor_algorithm <- ifelse(
+      test = sby_predictor_column_count > 15L,
+      yes = "Exhaustive",
+      no = "Kmknn"
+    )
+=======
 # Executa instrucao do fluxo preservado
 sby_create_bioc_neighbor_param <- function(sby_bioc_neighbor_algorithm, sby_predictor_column_count) {
   # Executa instrucao do fluxo preservado
@@ -8,6 +17,7 @@ sby_create_bioc_neighbor_param <- function(sby_bioc_neighbor_algorithm, sby_pred
     # Executa instrucao do fluxo preservado
     sby_bioc_neighbor_algorithm <- if (sby_predictor_column_count > 15L) "Exhaustive" else "Kmknn"
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   }
 
   # Executa instrucao do fluxo preservado

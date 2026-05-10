@@ -22,18 +22,27 @@ sby_get_knnx <- function(
   sby_hnsw_ef,
   # Executa instrucao do fluxo preservado
   sby_knn_query_chunk_size = getOption("instanceengineering.sby_knn_query_chunk_size", 1000L)
+<<<<<<< HEAD
+) {
+=======
 # Executa instrucao do fluxo preservado
 ) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_over_under_check_user_interrupt()
   # Executa instrucao do fluxo preservado
   sby_knn_query_chunk_size <- sby_validate_knn_query_chunk_size(sby_knn_query_chunk_size)
 
+<<<<<<< HEAD
+  if (identical(sby_knn_backend, "FNN")) {
+    if (!requireNamespace("FNN", quietly = TRUE)) {
+=======
   # Executa instrucao do fluxo preservado
   if (identical(sby_knn_backend, "FNN")) {
     # Executa instrucao do fluxo preservado
     if (!requireNamespace("FNN", quietly = TRUE)) {
       # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
       sby_over_under_abort("'sby_knn_backend = FNN' requer o pacote FNN")
     # Executa instrucao do fluxo preservado
     }
@@ -46,9 +55,13 @@ sby_get_knnx <- function(
       sby_k = sby_k,
       # Executa instrucao do fluxo preservado
       sby_knn_query_chunk_size = sby_knn_query_chunk_size,
+<<<<<<< HEAD
+      sby_query_fun = function(sby_query_chunk) {
+=======
       # Executa instrucao do fluxo preservado
       sby_query_fun = function(sby_query_chunk) {
         # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
         FNN::get.knnx(
           # Executa instrucao do fluxo preservado
           data = sby_data,
@@ -72,11 +85,16 @@ sby_get_knnx <- function(
   # Executa instrucao do fluxo preservado
   }
 
+<<<<<<< HEAD
+  if (identical(sby_knn_backend, "RcppHNSW")) {
+    if (!requireNamespace("RcppHNSW", quietly = TRUE)) {
+=======
   # Executa instrucao do fluxo preservado
   if (identical(sby_knn_backend, "RcppHNSW")) {
     # Executa instrucao do fluxo preservado
     if (!requireNamespace("RcppHNSW", quietly = TRUE)) {
       # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
       sby_over_under_abort("'sby_knn_backend = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW').")
     # Executa instrucao do fluxo preservado
     }
@@ -120,9 +138,13 @@ sby_get_knnx <- function(
       sby_k = sby_k,
       # Executa instrucao do fluxo preservado
       sby_knn_query_chunk_size = sby_hnsw_query_chunk_size,
+<<<<<<< HEAD
+      sby_query_fun = function(sby_query_chunk) {
+=======
       # Executa instrucao do fluxo preservado
       sby_query_fun = function(sby_query_chunk) {
         # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
         sby_hnsw_result <- RcppHNSW::hnsw_search(
           # Executa instrucao do fluxo preservado
           X = sby_query_chunk,
@@ -158,9 +180,13 @@ sby_get_knnx <- function(
   # Executa instrucao do fluxo preservado
   }
 
+<<<<<<< HEAD
+  if (!requireNamespace("BiocNeighbors", quietly = TRUE) || !requireNamespace("BiocParallel", quietly = TRUE)) {
+=======
   # Executa instrucao do fluxo preservado
   if (!requireNamespace("BiocNeighbors", quietly = TRUE) || !requireNamespace("BiocParallel", quietly = TRUE)) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_over_under_abort("'sby_knn_backend = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel')).")
   # Executa instrucao do fluxo preservado
   }
@@ -194,6 +220,11 @@ sby_get_knnx <- function(
 
 #' Executar consultas KNN em blocos interrompiveis
 #' @noRd
+<<<<<<< HEAD
+sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_query_fun) {
+  sby_query_rows <- nrow(sby_query)
+  if (sby_query_rows <= sby_knn_query_chunk_size) {
+=======
 # Executa instrucao do fluxo preservado
 sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_query_fun) {
   # Executa instrucao do fluxo preservado
@@ -201,6 +232,7 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
   # Executa instrucao do fluxo preservado
   if (sby_query_rows <= sby_knn_query_chunk_size) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     return(sby_query_fun(sby_query))
   # Executa instrucao do fluxo preservado
   }
@@ -212,9 +244,13 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
   # Executa instrucao do fluxo preservado
   sby_chunk_starts <- seq.int(1L, sby_query_rows, by = sby_knn_query_chunk_size)
 
+<<<<<<< HEAD
+  for (sby_chunk_start in sby_chunk_starts) {
+=======
   # Executa instrucao do fluxo preservado
   for (sby_chunk_start in sby_chunk_starts) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_over_under_check_user_interrupt()
     # Executa instrucao do fluxo preservado
     sby_chunk_end <- min(sby_chunk_start + sby_knn_query_chunk_size - 1L, sby_query_rows)

@@ -1,6 +1,11 @@
 
 #' Montar tibble balanceado com TARGET como primeira coluna
 #' @noRd
+<<<<<<< HEAD
+sby_build_balanced_tibble <- function(sby_predictor_data, sby_target_vector) {
+  sby_predictor_tibble <- tibble::as_tibble(sby_predictor_data)
+  if ("TARGET" %in% names(sby_predictor_tibble)) {
+=======
 # Executa instrucao do fluxo preservado
 sby_build_balanced_tibble <- function(sby_predictor_data, sby_target_vector) {
   # Executa instrucao do fluxo preservado
@@ -8,6 +13,7 @@ sby_build_balanced_tibble <- function(sby_predictor_data, sby_target_vector) {
   # Executa instrucao do fluxo preservado
   if ("TARGET" %in% names(sby_predictor_tibble)) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_over_under_abort("'sby_predictor_data' nao pode conter coluna chamada TARGET")
   # Executa instrucao do fluxo preservado
   }

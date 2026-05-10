@@ -37,9 +37,13 @@ sby_step_balance_new <- function(
   sby_skip,
   # Executa instrucao do fluxo preservado
   sby_id
+<<<<<<< HEAD
+) {
+=======
 # Executa instrucao do fluxo preservado
 ) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   recipes::step(
     # Executa instrucao do fluxo preservado
     subclass = "sby_step_balance",

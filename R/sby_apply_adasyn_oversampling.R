@@ -20,9 +20,13 @@
 #' @param sby_hnsw_ef tamanho da lista dinamica de construcao/busca RcppHNSW.
 #' @return Tibble balanceado quando sby_audit = FALSE; lista de auditoria quando TRUE.
 #' @export
+<<<<<<< HEAD
+sby_adasyn <- function(
+=======
 # Executa instrucao do fluxo preservado
 sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_predictor_data,
   # Executa instrucao do fluxo preservado
   sby_target_vector,
@@ -50,9 +54,13 @@ sby_adasyn <- function(
   sby_hnsw_m = 16L,
   # Executa instrucao do fluxo preservado
   sby_hnsw_ef = 200L
+<<<<<<< HEAD
+) {
+=======
 # Executa instrucao do fluxo preservado
 ) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_over_under_check_user_interrupt()
   # Executa instrucao do fluxo preservado
   sby_audit <- sby_validate_logical_scalar(sby_audit, "sby_audit")
@@ -77,9 +85,13 @@ sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
   sby_validate_sampling_inputs(sby_predictor_data, sby_target_vector, sby_seed)
 
+<<<<<<< HEAD
+  if (!is.numeric(sby_k_over) || length(sby_k_over) != 1L || is.na(sby_k_over) || sby_k_over < 1L) {
+=======
   # Executa instrucao do fluxo preservado
   if (!is.numeric(sby_k_over) || length(sby_k_over) != 1L || is.na(sby_k_over) || sby_k_over < 1L) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_over_under_abort("'sby_k_over' deve ser inteiro positivo")
   # Executa instrucao do fluxo preservado
   }
@@ -142,9 +154,13 @@ sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
   sby_over_under_check_user_interrupt()
 
+<<<<<<< HEAD
+  sby_final_predictors <- if (sby_restore_types) {
+=======
   # Executa instrucao do fluxo preservado
   sby_final_predictors <- if (sby_restore_types) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_restore_numeric_column_types(sby_x_restored, sby_type_info, sby_as_data_frame = TRUE)
   # Executa instrucao do fluxo preservado
   } else {
@@ -160,7 +176,31 @@ sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
   sby_balanced_data <- sby_build_balanced_tibble(sby_final_predictors, sby_adasyn_result$y)
 
+<<<<<<< HEAD
+  # Define metadado do algoritmo BiocNeighbors usado no diagnostico
+  sby_diagnostic_bioc_neighbor_algorithm <- ifelse(
+    test = identical(sby_knn_backend, "BiocNeighbors"),
+    yes = sby_bioc_neighbor_algorithm,
+    no = NA_character_
+  )
+
+  # Define metadado de conectividade HNSW usado no diagnostico
+  sby_diagnostic_hnsw_m <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_m,
+    no = NA_integer_
+  )
+
+  # Define metadado de busca HNSW usado no diagnostico
+  sby_diagnostic_hnsw_ef <- ifelse(
+    test = identical(sby_knn_backend, "RcppHNSW"),
+    yes = sby_hnsw_ef,
+    no = NA_integer_
+  )
+
+=======
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_diagnostics <- list(
     # Executa instrucao do fluxo preservado
     sby_input_rows = NROW(sby_x_matrix),
@@ -172,6 +212,11 @@ sby_adasyn <- function(
     sby_knn_backend = sby_knn_backend,
     # Executa instrucao do fluxo preservado
     sby_knn_workers = sby_knn_workers,
+<<<<<<< HEAD
+    sby_bioc_neighbor_algorithm = sby_diagnostic_bioc_neighbor_algorithm,
+    sby_hnsw_m = sby_diagnostic_hnsw_m,
+    sby_hnsw_ef = sby_diagnostic_hnsw_ef,
+=======
     # Executa instrucao do fluxo preservado
     sby_bioc_neighbor_algorithm = if (identical(sby_knn_backend, "BiocNeighbors")) sby_bioc_neighbor_algorithm else NA_character_,
     # Executa instrucao do fluxo preservado
@@ -179,6 +224,7 @@ sby_adasyn <- function(
     # Executa instrucao do fluxo preservado
     sby_hnsw_ef = if (identical(sby_knn_backend, "RcppHNSW")) sby_hnsw_ef else NA_integer_,
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_input_class_distribution = table(sby_target_factor),
     # Executa instrucao do fluxo preservado
     sby_output_class_distribution = table(as.factor(sby_adasyn_result$y))
@@ -198,9 +244,13 @@ sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
   )
 
+<<<<<<< HEAD
+  if (isTRUE(sby_return_scaled)) {
+=======
   # Executa instrucao do fluxo preservado
   if (isTRUE(sby_return_scaled)) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_result$sby_balanced_scaled <- list(
       # Executa instrucao do fluxo preservado
       x = sby_adasyn_result$x,
@@ -211,9 +261,13 @@ sby_adasyn <- function(
   # Executa instrucao do fluxo preservado
   }
 
+<<<<<<< HEAD
+  if (isTRUE(sby_audit)) {
+=======
   # Executa instrucao do fluxo preservado
   if (isTRUE(sby_audit)) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     return(sby_result)
   # Executa instrucao do fluxo preservado
   }

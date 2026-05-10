@@ -1,13 +1,22 @@
 
 #' Inferir tipos numericos para restauracao posterior
 #' @noRd
+<<<<<<< HEAD
+sby_infer_numeric_column_types <- function(sby_data_frame) {
+=======
 # Executa instrucao do fluxo preservado
 sby_infer_numeric_column_types <- function(sby_data_frame) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_x_matrix <- sby_over_under_as_numeric_matrix(sby_data_frame)
   # Executa instrucao do fluxo preservado
   sby_column_names <- sby_over_under_get_column_names(sby_data_frame)
 
+<<<<<<< HEAD
+  sby_infer_one <- function(sby_column_data) {
+    sby_unique_values <- sort(unique(sby_column_data))
+    if (length(sby_unique_values) <= 2L && all(sby_unique_values %in% c(0, 1))) {
+=======
   # Executa instrucao do fluxo preservado
   sby_infer_one <- function(sby_column_data) {
     # Executa instrucao do fluxo preservado
@@ -15,14 +24,19 @@ sby_infer_numeric_column_types <- function(sby_data_frame) {
     # Executa instrucao do fluxo preservado
     if (length(sby_unique_values) <= 2L && all(sby_unique_values %in% c(0, 1))) {
       # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
       return("binary")
     # Executa instrucao do fluxo preservado
     }
     # Executa instrucao do fluxo preservado
     sby_is_integer_like <- all(abs(sby_column_data - round(sby_column_data)) < sqrt(.Machine$double.eps))
+<<<<<<< HEAD
+    if (sby_is_integer_like) {
+=======
     # Executa instrucao do fluxo preservado
     if (sby_is_integer_like) {
       # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
       return("integer")
     # Executa instrucao do fluxo preservado
     }

@@ -1,8 +1,12 @@
 
 #' @export
+<<<<<<< HEAD
+prep.step_sby_step_balance <- function(x, training, info = NULL, ...) {
+=======
 # Executa instrucao do fluxo preservado
 prep.step_sby_step_balance <- function(x, training, info = NULL, ...) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_x <- x
   # Executa instrucao do fluxo preservado
   sby_training <- training
@@ -13,9 +17,13 @@ prep.step_sby_step_balance <- function(x, training, info = NULL, ...) {
 
   # Executa instrucao do fluxo preservado
   sby_selected_columns <- recipes::recipes_eval_select(sby_x$sby_terms, sby_training, sby_info)
+<<<<<<< HEAD
+  if (length(sby_selected_columns) != 1L) {
+=======
   # Executa instrucao do fluxo preservado
   if (length(sby_selected_columns) != 1L) {
     # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
     sby_over_under_abort("'sby_step_balance()' deve selecionar exatamente uma coluna de desfecho")
   # Executa instrucao do fluxo preservado
   }

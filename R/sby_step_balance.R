@@ -63,9 +63,13 @@ sby_step_balance <- function(
   sby_skip = TRUE,
   # Executa instrucao do fluxo preservado
   sby_id = recipes::rand_id("balance")
+<<<<<<< HEAD
+) {
+=======
 # Executa instrucao do fluxo preservado
 ) {
   # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_over_under_check_user_interrupt()
   # Executa instrucao do fluxo preservado
   recipes::recipes_pkg_check(required_pkgs.step_sby_step_balance())
