@@ -25,61 +25,119 @@
 #' @param sby_id Identificador unico da etapa.
 #' @return Um objeto recipe com a etapa adicionada.
 #' @export
+# Executa instrucao do fluxo preservado
 sby_step_balance <- function(
+  # Executa instrucao do fluxo preservado
   sby_recipe,
+  # Executa instrucao do fluxo preservado
   ...,
+  # Executa instrucao do fluxo preservado
   sby_role = NA,
+  # Executa instrucao do fluxo preservado
   sby_trained = FALSE,
+  # Executa instrucao do fluxo preservado
   sby_columns = NULL,
+  # Executa instrucao do fluxo preservado
   sby_under_ratio = 0.5,
+  # Executa instrucao do fluxo preservado
   sby_k_under = 5L,
+  # Executa instrucao do fluxo preservado
   sby_seed = 42L,
+  # Executa instrucao do fluxo preservado
   sby_audit = FALSE,
+  # Executa instrucao do fluxo preservado
   sby_restore_types = TRUE,
+  # Executa instrucao do fluxo preservado
   sby_knn_algorithm = c("auto", "cover_tree", "kd_tree", "brute"),
+  # Executa instrucao do fluxo preservado
   sby_knn_backend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  # Executa instrucao do fluxo preservado
   sby_knn_workers = 1L,
+  # Executa instrucao do fluxo preservado
   sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  # Executa instrucao do fluxo preservado
   sby_hnsw_m = 16L,
+  # Executa instrucao do fluxo preservado
   sby_hnsw_ef = 200L,
+  # Executa instrucao do fluxo preservado
   sby_skip = TRUE,
+  # Executa instrucao do fluxo preservado
   sby_id = recipes::rand_id("balance")
+<<<<<<< HEAD
 ) {
+=======
+# Executa instrucao do fluxo preservado
+) {
+  # Executa instrucao do fluxo preservado
+>>>>>>> origin/main
   sby_over_under_check_user_interrupt()
+  # Executa instrucao do fluxo preservado
   recipes::recipes_pkg_check(required_pkgs.step_sby_step_balance())
 
+  # Executa instrucao do fluxo preservado
   sby_terms <- rlang::enquos(...)
+  # Executa instrucao do fluxo preservado
   sby_audit <- sby_validate_logical_scalar(sby_audit, "sby_audit")
+  # Executa instrucao do fluxo preservado
   sby_restore_types <- sby_validate_logical_scalar(sby_restore_types, "sby_restore_types")
+  # Executa instrucao do fluxo preservado
   sby_skip <- sby_validate_logical_scalar(sby_skip, "sby_skip")
+  # Executa instrucao do fluxo preservado
   sby_knn_algorithm <- match.arg(sby_knn_algorithm)
+  # Executa instrucao do fluxo preservado
   sby_knn_backend <- match.arg(sby_knn_backend)
+  # Executa instrucao do fluxo preservado
   sby_bioc_neighbor_algorithm <- match.arg(sby_bioc_neighbor_algorithm)
+  # Executa instrucao do fluxo preservado
   sby_knn_workers <- sby_validate_knn_workers(sby_knn_workers)
+  # Executa instrucao do fluxo preservado
   sby_hnsw_params <- sby_validate_hnsw_params(sby_hnsw_m, sby_hnsw_ef)
 
+  # Executa instrucao do fluxo preservado
   recipes::add_step(
+    # Executa instrucao do fluxo preservado
     sby_recipe,
+    # Executa instrucao do fluxo preservado
     sby_step_balance_new(
+      # Executa instrucao do fluxo preservado
       sby_terms = sby_terms,
+      # Executa instrucao do fluxo preservado
       sby_role = sby_role,
+      # Executa instrucao do fluxo preservado
       sby_trained = sby_trained,
+      # Executa instrucao do fluxo preservado
       sby_columns = sby_columns,
+      # Executa instrucao do fluxo preservado
       sby_under_ratio = sby_under_ratio,
+      # Executa instrucao do fluxo preservado
       sby_k_under = sby_k_under,
+      # Executa instrucao do fluxo preservado
       sby_seed = sby_seed,
+      # Executa instrucao do fluxo preservado
       sby_audit = sby_audit,
+      # Executa instrucao do fluxo preservado
       sby_restore_types = sby_restore_types,
+      # Executa instrucao do fluxo preservado
       sby_knn_algorithm = sby_knn_algorithm,
+      # Executa instrucao do fluxo preservado
       sby_knn_backend = sby_knn_backend,
+      # Executa instrucao do fluxo preservado
       sby_knn_workers = sby_knn_workers,
+      # Executa instrucao do fluxo preservado
       sby_bioc_neighbor_algorithm = sby_bioc_neighbor_algorithm,
+      # Executa instrucao do fluxo preservado
       sby_hnsw_m = sby_hnsw_params$sby_hnsw_m,
+      # Executa instrucao do fluxo preservado
       sby_hnsw_ef = sby_hnsw_params$sby_hnsw_ef,
+      # Executa instrucao do fluxo preservado
       sby_skip = sby_skip,
+      # Executa instrucao do fluxo preservado
       sby_id = sby_id
+    # Executa instrucao do fluxo preservado
     )
+  # Executa instrucao do fluxo preservado
   )
+# Executa instrucao do fluxo preservado
 }
 
 ####
