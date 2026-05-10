@@ -89,23 +89,26 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse) {
   double *y = REAL(out);
   const int do_reverse = asLogical(reverse);
 
-  for (int j = 0; j < p; ++j) {
-    if ((j & 15) == 0) {
+  for(int j = 0; j < p; ++j){
+    
+    if((j & 15) == 0){
       R_CheckUserInterrupt();
     }
+    
     const R_xlen_t offset = (R_xlen_t) j * n;
     const double center = mu[j];
     const double scale = sd[j];
-    if (do_reverse) {
-      for (int i = 0; i < n; ++i) {
-        if ((i & 65535) == 0) {
+    
+    if(do_reverse){
+      for(int i = 0; i < n; ++i){
+        if((i & 65535) == 0){
           R_CheckUserInterrupt();
         }
         y[offset + i] = x[offset + i] * scale + center;
       }
     } else {
-      for (int i = 0; i < n; ++i) {
-        if ((i & 65535) == 0) {
+      for(int i = 0; i < n; ++i){
+        if((i & 65535) == 0){
           R_CheckUserInterrupt();
         }
         y[offset + i] = (x[offset + i] - center) / scale;
@@ -115,16 +118,18 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse) {
 
   setAttrib(out, R_DimNamesSymbol, getAttrib(xMatrix, R_DimNamesSymbol));
   UNPROTECT(1);
+  
   return out;
 }
 
 SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex, SEXP syntheticPerRow){
   
   require_real_matrix(minorityMatrix, "minorityMatrix");
-  if (!isInteger(minorityNeighborIndex) || !isMatrix(minorityNeighborIndex)) {
+  
+  if(!isInteger(minorityNeighborIndex) || !isMatrix(minorityNeighborIndex)){
     error("'minorityNeighborIndex' deve ser uma matrix integer");
   }
-  if (!isInteger(syntheticPerRow)) {
+  if(!isInteger(syntheticPerRow)){
     error("'syntheticPerRow' deve ser um vetor integer");
   }
 
@@ -135,11 +140,11 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
   const int neighborRows = INTEGER(neighborDims)[0];
   const int neighborCount = INTEGER(neighborDims)[1];
 
-  if (neighborRows != minorityRows || XLENGTH(syntheticPerRow) != minorityRows) {
+  if(neighborRows != minorityRows || XLENGTH(syntheticPerRow) != minorityRows){
     error("Dimensoes inconsistentes para geracao ADASYN");
   }
   
-  if (neighborCount < 1) {
+  if(neighborCount < 1){
     error("'minorityNeighborIndex' deve conter ao menos uma coluna");
   }
 
@@ -152,7 +157,7 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
     if ((i & 8191) == 0) {
       R_CheckUserInterrupt();
     }
-    if (perRow[i] < 0) {
+    if(perRow[i] < 0){
       error("'syntheticPerRow' nao pode conter valores negativos");
     }
     totalSynthetic += (R_xlen_t) perRow[i];
@@ -165,6 +170,7 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
   double *synthetic = REAL(out);
 
   GetRNGstate();
+  
   int writeRow = 0;
   for (int i = 0; i < minorityRows; ++i) {
     if ((i & 255) == 0 && i > 0) {
@@ -173,21 +179,21 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
       GetRNGstate();
     }
     const int rowCount = perRow[i];
-    for (int r = 0; r < rowCount; ++r) {
+    for(int r = 0; r < rowCount; ++r){
       int sampledNeighborColumn = (int) floor(unif_rand() * (double) neighborCount);
-      if (sampledNeighborColumn >= neighborCount) {
+      if(sampledNeighborColumn >= neighborCount){
         sampledNeighborColumn = neighborCount - 1;
       }
 
       const int selectedNeighborRow = neighbor[i + ((R_xlen_t) sampledNeighborColumn * minorityRows)] - 1;
-      if (selectedNeighborRow < 0 || selectedNeighborRow >= minorityRows) {
+      if(selectedNeighborRow < 0 || selectedNeighborRow >= minorityRows){
         PutRNGstate();
         error("'minorityNeighborIndex' contem indice fora do intervalo");
       }
 
       const double weight = unif_rand();
-      for (int j = 0; j < colCount; ++j) {
-        if ((j & 1023) == 0 && j > 0) {
+      for(int j = 0; j < colCount; ++j){
+        if((j & 1023) == 0 && j > 0){
           PutRNGstate();
           R_CheckUserInterrupt();
           GetRNGstate();
@@ -197,16 +203,18 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
         synthetic[writeRow + ((R_xlen_t) j * totalSynthetic)] = baseValue + weight * (neighborValue - baseValue);
       }
       ++writeRow;
-      if ((writeRow & 4095) == 0) {
+      if((writeRow & 4095) == 0){
         PutRNGstate();
         R_CheckUserInterrupt();
         GetRNGstate();
       }
     }
   }
+  
   PutRNGstate();
 
   UNPROTECT(1);
+  
   return out;
 }
 
@@ -218,15 +226,15 @@ static const R_CallMethodDef CallEntries[] = {
   {NULL, NULL, 0}
 };
 
-static void register_over_under_routines(DllInfo *dll) {
+static void register_instenginer_routines(DllInfo *dll){
   R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
 }
 
-void R_init_instanceengineering(DllInfo *dll) {
-  register_over_under_routines(dll);
+void R_init_instaenginer(DllInfo *dll){
+  register_adanear(dll);
 }
 
-void R_init_over_under_fast(DllInfo *dll) {
-  register_over_under_routines(dll);
+void R_init_instaenginer(DllInfo *dll){
+  register_instenginer_routines(dll);
 }
