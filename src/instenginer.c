@@ -32,20 +32,48 @@
 #include <R_ext/Utils.h>
 #include <R_ext/Visibility.h>
 
+/**
+ * @brief Invoca verificacao de interrupcao do usuario no ambiente R.
+ *
+ * Previne travamentos durante execucoes prolongadas na camada C, repassando 
+ * o sinal para a API do R avaliar quebras manuais via teclado.
+ *
+ * @return SEXP Retorna R_NilValue incondicionalmente.
+ */
 SEXP OU_CheckUserInterruptC(void){
+  
   /* Repassa o sinal para a API do R avaliar quebras manuais via teclado */
   R_CheckUserInterrupt();
   return R_NilValue;
 }
 
+/**
+ * @brief Valida se o objeto SEXP fornecido e uma matriz de precisao dupla (REALSXP).
+ *
+ * Interrompe a execucao com erro caso o tipo ou formato divirjam do tensor 2D de reais.
+ *
+ * @param x O objeto SEXP a ser inspecionado.
+ * @param name O nome da variavel injetado na formatacao do log de erro.
+ */
 static void require_real_matrix(SEXP x, const char *name){
+  
   /* Trava a execucao caso a entrada divirja do formato tensor 2D de reais */
   if (!isReal(x) || !isMatrix(x)) {
     error("O parametro '%s' deve ser uma matrix double", name);
   }
 }
 
+/**
+ * @brief Calcula media e desvio padrao amostral por coluna para normalizacao.
+ *
+ * Implementa o algoritmo de duas passagens com tipos long double para
+ * evitar cancelamento catastrofico no calculo da variancia.
+ *
+ * @param xMatrix SEXP (matriz numerica double) contendo a base de dados.
+ * @return SEXP Lista R contendo vetores numericos "centers" e "scales".
+ */
 SEXP OU_ComputeZScoreParamsC(SEXP xMatrix){
+  
   /* Valida coerencia da estrutura de dados de entrada */
   require_real_matrix(xMatrix, "xMatrix");
   
@@ -118,7 +146,20 @@ SEXP OU_ComputeZScoreParamsC(SEXP xMatrix){
   return out;
 }
 
+/**
+ * @brief Executa a transformacao Z-Score ou reversao dimensional em matriz double.
+ *
+ * Utiliza logica de ramificacao externa aos lacos internos para ganho de performance,
+ * reposicionando os dados ao redor da media especificada e ajustando pelo desvio.
+ *
+ * @param xMatrix SEXP (matriz numerica double) com os dados alvo.
+ * @param centers SEXP (vetor numerico double) contendo o momento inicial absoluto (media).
+ * @param scales SEXP (vetor numerico double) contendo a raiz do espalhamento (desvio).
+ * @param reverse SEXP (booleano logico). Valor TRUE restaura a escala nativa.
+ * @return SEXP Matriz numerica R contendo a base transformada.
+ */
 SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse){
+  
   /* Valida existencia de matriz alvo e arrays de normalizacao pre ajustados */
   require_real_matrix(xMatrix, "xMatrix");
   
@@ -180,6 +221,18 @@ SEXP OU_ApplyZScoreC(SEXP xMatrix, SEXP centers, SEXP scales, SEXP reverse){
   return out;
 }
 
+/**
+ * @brief Gera dados sinteticos aplicando interpolacao topologica (ADASYN).
+ *
+ * Expande a representatividade da classe alvo minoritaria atraves da criacao 
+ * estocastica de novas ocorrencias posicionadas no plano cartesiano entre 
+ * a observacao base e seus k-vizinhos diretos.
+ *
+ * @param minorityMatrix SEXP (matriz double) Base de features da classe limitante.
+ * @param minorityNeighborIndex SEXP (matriz integer) Indices referenciais da malha vizinha.
+ * @param syntheticPerRow SEXP (vetor integer) Carga de reproducao individualizada por linha.
+ * @return SEXP Matriz double compreendendo unicamente a nova massa de dados gerada.
+ */
 SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex, SEXP syntheticPerRow){
   /* Valida restricoes primarias de construcao da rede relacional vizinha */
   require_real_matrix(minorityMatrix, "minorityMatrix");
@@ -297,6 +350,9 @@ SEXP OU_GenerateSyntheticAdasynC(SEXP minorityMatrix, SEXP minorityNeighborIndex
   return out;
 }
 
+/**
+ * @brief Mapeia as rotinas internas em C para as chamadas .Call dinamicas provenientes do R.
+ */
 static const R_CallMethodDef CallEntries[] = {
   {"OU_CheckUserInterruptC", (DL_FUNC) &OU_CheckUserInterruptC, 0},
   {"OU_ComputeZScoreParamsC", (DL_FUNC) &OU_ComputeZScoreParamsC, 1},
@@ -305,6 +361,14 @@ static const R_CallMethodDef CallEntries[] = {
   {NULL, NULL, 0}
 };
 
+/**
+ * @brief Rotina de inicializacao requerida pelo R ao carregar a biblioteca dinamica.
+ *
+ * Registra o modulo 'adanear' no interpretador e bloqueia a analise dinamica 
+ * de simbolos externos para mitigar falhas de resolucao em tempo de execucao.
+ *
+ * @param dll Referencia referencial de ligacao gerada pela maquina virtual do R.
+ */
 void attribute_visible R_init_adanear(DllInfo *dll){
   /* Registra lista de acesso conectando strings R com ponteiros reais no binario */
   R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
