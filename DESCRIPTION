@@ -1,8 +1,8 @@
-Package: instanceengineering
+Package: instenginer
 Type: Package
-Title: High-Performance Binary Over/Under Sampling
-Version: 0.2.3
-Authors@R: person("Joao", "B. G. de Brito", email = "joaosabby@users.noreply.github.com", role = c("aut", "cre"))
+Title: High-Performance to Instance Engineering  
+Version: 0.2.6
+Authors@R: person("Joao", "B. G. de Brito", email = "joao@sabby.com.br", role = c("aut", "cre"))
 Description: Provides high-performance binary over- and under-sampling routines
     using ADASYN and NearMiss-1. The implementation uses numeric matrices,
     optional native C kernels, Rfast fallbacks, and configurable nearest-neighbor
@@ -16,6 +16,7 @@ Depends:
     R (>= 4.0.0)
 Imports:
     cli,
+    RcppHNSW
     FNN,
     generics,
     recipes,
@@ -26,5 +27,4 @@ Suggests:
     BiocManager,
     BiocNeighbors,
     BiocParallel,
-    modeldata,
-    RcppHNSW
+    modeldata
