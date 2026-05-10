@@ -6,67 +6,41 @@
 \alias{print.step_sby_step_adanear}
 \alias{required_pkgs.step_sby_step_adanear}
 \title{Balance binary classes in recipes with NearMiss-1}
-\description{
-Adds a recipes/tidymodels step that runs \code{sby_nearmiss()}
-during recipe processing. The step changes the number of rows and therefore
-defaults to \code{sby_skip = TRUE} for new data.
-}
-\usage{
-sby_step_adanear(
-  sby_recipe,
-  ...,
-  sby_role = NA,
-  sby_trained = FALSE,
-  sby_columns = NULL,
-  sby_under_ratio = 0.5,
-  sby_k_under = 5L,
-  sby_seed = 42L,
-  sby_audit = FALSE,
-  sby_restore_types = TRUE,
-  sby_knn_algorithm = c("auto", "cover_tree", "kd_tree", "brute"),
-  sby_knn_backend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
-  sby_knn_workers = 1L,
-  sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
-  sby_hnsw_m = 16L,
-  sby_hnsw_ef = 200L,
-  sby_skip = TRUE,
-  sby_id = recipes::rand_id("balance")
-)
-}
+\description{Adds a recipes/tidymodels step that runs \code{sby_nearmiss()} with the unified KNN configuration.}
+\usage{sby_step_adanear(sby_recipe, ..., sby_role = NA, sby_trained = FALSE, sby_columns = NULL, sby_under_ratio = 0.5, sby_k_under = 5L, sby_seed = 42L, sby_audit = FALSE, sby_restore_types = TRUE, sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"), sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"), sby_distance_metric = c("euclidean", "ip", "cosine"), sby_knn_workers = 1L, sby_hnsw_m = 16L, sby_hnsw_ef = 200L, sby_skip = TRUE, sby_id = recipes::rand_id("balance"))}
 \arguments{
 \item{sby_recipe}{A \code{recipes::recipe()} object.}
-\item{...}{Recipes/tidyselect selectors that identify exactly one binary outcome column.}
-\item{sby_role}{Step role retained for recipes compatibility.}
-\item{sby_trained}{Whether the step has been trained by \code{prep()}.}
-\item{sby_columns}{Outcome column selected during \code{prep()}.}
-\item{sby_under_ratio}{Fraction of majority observations retained by NearMiss-1.}
-\item{sby_k_under}{Number of nearest minority neighbors used by NearMiss-1.}
-\item{sby_seed}{Numeric random seed.}
-\item{sby_audit}{Logical. When \code{FALSE}, \code{bake()} returns the balanced tibble. When \code{TRUE}, \code{bake()} returns the full audit list produced by \code{sby_nearmiss()}.}
-\item{sby_restore_types}{Whether to restore inferred integer/binary numeric predictors.}
-\item{sby_knn_algorithm}{FNN algorithm when \code{sby_knn_backend = "FNN"}.}
-\item{sby_knn_backend}{Nearest-neighbor backend: \code{"FNN"}, \code{"BiocNeighbors"}, \code{"RcppHNSW"}, or \code{"auto"}.}
-\item{sby_knn_workers}{Number of workers/threads for backends that support them.}
-\item{sby_bioc_neighbor_algorithm}{BiocNeighbors algorithm.}
-\item{sby_hnsw_m, sby_hnsw_ef}{RcppHNSW index connectivity and search/build effort parameters.}
-\item{sby_skip}{Whether to skip the step when baking new data. Defaults to \code{TRUE}.}
-\item{sby_id}{Unique step identifier.}
+\item{...}{Selectors identifying exactly one binary outcome column.}
+\item{sby_role, sby_trained, sby_columns, sby_skip, sby_id}{Recipes step metadata.}
+\item{sby_under_ratio, sby_k_under, sby_seed, sby_audit, sby_restore_types}{NearMiss and output controls.}
+\item{sby_knn_algorithm, sby_knn_engine, sby_distance_metric, sby_knn_workers}{Unified KNN configuration.}
+\item{sby_hnsw_m, sby_hnsw_ef}{RcppHNSW index connectivity and effort parameters.}
 }
-\value{
-A recipe with an added \code{sby_step_adanear} step. When baked with
-\code{sby_audit = FALSE}, the output is a tibble with the \code{TARGET} outcome column first.
-When baked with \code{sby_audit = TRUE}, the output is the audit list.
+\value{A recipe with an added \code{sby_step_adanear} step.}
+\details{The KNN interface is unified by \code{sby_knn_engine}, \code{sby_knn_algorithm}, and
+\code{sby_distance_metric}. Z-score standardization is applied before nearest-neighbor
+search; when \code{sby_distance_metric} is \code{"ip"} or \code{"cosine"}, the reference
+and query matrices are also internally L2-normalized after Z-score scaling and before
+submission to the KNN engine.
+
+\tabular{llll}{
+Engine \tab Algorithms \tab Search type \tab Supported metrics\cr
+FNN \tab \code{auto}, \code{kd_tree}, \code{cover_tree}, \code{brute} \tab Exact \tab \code{euclidean}\cr
+BiocNeighbors \tab \code{Kmknn}, \code{Vptree}, \code{Exhaustive} \tab Exact \tab \code{euclidean}, \code{cosine}\cr
+BiocNeighbors \tab \code{Annoy}, \code{Hnsw} \tab Approximate \tab \code{euclidean}, \code{cosine}\cr
+RcppHNSW \tab internally managed \tab Approximate \tab \code{euclidean}, \code{cosine}, \code{ip}\cr
 }
-\details{
-Select the binary outcome in \code{...}, for example
-\code{sby_step_adanear(sby_recipe, y)}. All remaining columns are passed to
-\code{sby_nearmiss()} as numeric predictors, so categorical
-predictors should be encoded by earlier recipe steps when needed.
-}
-\examples{
-if (requireNamespace("recipes", quietly = TRUE)) {
-  set.seed(1)
-  sby_dat <- data.frame(sby_a = rnorm(40), sby_b = rnorm(40), y = factor(c(rep("no", 30), rep("yes", 10))))
-  sby_rec <- sby_step_adanear(recipes::recipe(y ~ ., data = sby_dat), y, sby_under_ratio = 0.8)
-}
+
+\code{euclidean} is the straight-line distance in continuous space,
+\eqn{d(x, y) = \sqrt{\sum (x_i - y_i)^2}}. \code{ip} is inner-product distance,
+\eqn{d(x, y) = 1 - \sum x_i y_i}, and triggers mandatory internal L2 normalization.
+\code{cosine} is angular distance,
+\eqn{d(x, y) = 1 - \frac{\sum x_i y_i}{\sqrt{\sum x_i^2} \sqrt{\sum y_i^2}}},
+and also uses internal L2 normalization for the non-Euclidean search path. FNN is
+explicitly blocked for \code{ip} and \code{cosine}; \code{ip} is accepted only by
+\code{sby_knn_engine = "RcppHNSW"}.}
+\references{
+He, H., Bai, Y., Garcia, E. A., \& Li, S. (2008). ADASYN: Adaptive synthetic sampling approach for imbalanced learning. IEEE International Joint Conference on Neural Networks.
+
+Malkov, Y. A., \& Yashunin, D. A. (2018). Efficient and robust approximate nearest neighbor search using hierarchical navigable small world graphs. IEEE Transactions on Pattern Analysis and Machine Intelligence.
 }

@@ -16,20 +16,20 @@ sby_create_knn_bioc_parallel_param <- function(sby_knn_workers){
     return(BiocParallel::SerialParam())
   }
 
-  # Seleciona backend paralelo compativel com o sistema operacional
+  # Seleciona engine paralelo compativel com o sistema operacional
   if(identical(
     x = .Platform$OS.type,
     y = "windows"
   )){
 
-    # Retorna backend socket para compatibilidade com Windows
+    # Retorna engine socket para compatibilidade com Windows
     return(BiocParallel::SnowParam(
       workers = sby_knn_workers,
       type    = "SOCK"
     ))
   }
 
-  # Retorna backend multicore para sistemas nao Windows
+  # Retorna engine multicore para sistemas nao Windows
   return(BiocParallel::MulticoreParam(
     workers = sby_knn_workers
   ))

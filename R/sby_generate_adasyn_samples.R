@@ -9,9 +9,9 @@
 #' @param sby_synthetic_count Numero de amostras sinteticas a gerar
 #' @param sby_k_over Numero de vizinhos usado pelo ADASYN
 #' @param sby_knn_algorithm Algoritmo KNN configurado
-#' @param sby_knn_backend Backend KNN configurado
+#' @param sby_knn_engine Engine KNN configurado
+#' @param sby_distance_metric Metrica de distancia KNN configurada
 #' @param sby_knn_workers Numero de workers KNN configurado
-#' @param sby_bioc_neighbor_algorithm Algoritmo BiocNeighbors configurado
 #' @param sby_hnsw_m Conectividade HNSW configurada
 #' @param sby_hnsw_ef Lista dinamica HNSW configurada
 #'
@@ -23,9 +23,9 @@ sby_generate_adasyn_samples <- function(
   sby_synthetic_count,
   sby_k_over,
   sby_knn_algorithm,
-  sby_knn_backend,
+  sby_knn_engine,
+  sby_distance_metric,
   sby_knn_workers,
-  sby_bioc_neighbor_algorithm,
   sby_hnsw_m,
   sby_hnsw_ef
 ){
@@ -51,9 +51,9 @@ sby_generate_adasyn_samples <- function(
     sby_query                   = sby_minority_matrix,
     sby_k                       = sby_effective_all_k,
     sby_knn_algorithm           = sby_knn_algorithm,
-    sby_knn_backend             = sby_knn_backend,
+    sby_knn_engine             = sby_knn_engine,
+    sby_distance_metric         = sby_distance_metric,
     sby_knn_workers             = sby_knn_workers,
-    sby_bioc_neighbor_algorithm = sby_bioc_neighbor_algorithm,
     sby_hnsw_m                  = sby_hnsw_m,
     sby_hnsw_ef                 = sby_hnsw_ef
   )
@@ -137,9 +137,9 @@ sby_generate_adasyn_samples <- function(
     sby_query                   = sby_minority_matrix,
     sby_k                       = sby_effective_minority_k,
     sby_knn_algorithm           = sby_knn_algorithm,
-    sby_knn_backend             = sby_knn_backend,
+    sby_knn_engine             = sby_knn_engine,
+    sby_distance_metric         = sby_distance_metric,
     sby_knn_workers             = sby_knn_workers,
-    sby_bioc_neighbor_algorithm = sby_bioc_neighbor_algorithm,
     sby_hnsw_m                  = sby_hnsw_m,
     sby_hnsw_ef                 = sby_hnsw_ef
   )

@@ -17,13 +17,13 @@ sby_validate_sampling_inputs <- function(
 ){
   
   # Carrega dependencias necessarias para as rotinas de sampling
-  sby_over_under_load_packages()
+  sby_adanear_load_packages()
 
   # Verifica se preditores possuem classe tabular suportada
   if(!(is.data.frame(sby_predictor_data) || is.matrix(sby_predictor_data))){
 
     # Aborta quando os preditores nao sao data frame nem matriz
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_predictor_data' deve ser data.frame ou matrix"
     )
   }
@@ -32,7 +32,7 @@ sby_validate_sampling_inputs <- function(
   if(NROW(sby_predictor_data) == 0L){
 
     # Aborta quando nao ha observacoes para balanceamento
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_predictor_data' deve conter ao menos uma linha"
     )
   }
@@ -41,7 +41,7 @@ sby_validate_sampling_inputs <- function(
   if(length(sby_target_vector) != NROW(sby_predictor_data)){
 
     # Aborta quando o alvo nao esta alinhado aos preditores
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_target_vector' deve ter o mesmo numero de linhas de 'sby_predictor_data'"
     )
   }
@@ -50,7 +50,7 @@ sby_validate_sampling_inputs <- function(
   if(anyNA(sby_predictor_data)){
 
     # Aborta quando preditores contem valores ausentes
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_predictor_data' nao pode conter NA"
     )
   }
@@ -59,7 +59,7 @@ sby_validate_sampling_inputs <- function(
   if(anyNA(sby_target_vector)){
 
     # Aborta quando alvo contem valores ausentes
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_target_vector' nao pode conter NA"
     )
   }
@@ -94,7 +94,7 @@ sby_validate_sampling_inputs <- function(
   if(!all(sby_is_numeric_column)){
 
     # Aborta quando ha preditor nao numerico
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "Todos os preditores devem ser numericos"
     )
   }
@@ -108,7 +108,7 @@ sby_validate_sampling_inputs <- function(
   if(nlevels(sby_target_factor) != 2L){
 
     # Aborta quando o alvo nao e binario
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_target_vector' deve ser binario"
     )
   }
@@ -122,7 +122,7 @@ sby_validate_sampling_inputs <- function(
   if(any(sby_class_counts < 2L)){
 
     # Aborta quando alguma classe tem menos de duas observacoes
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "Cada classe deve ter ao menos 2 observacoes"
     )
   }
@@ -131,7 +131,7 @@ sby_validate_sampling_inputs <- function(
   if(!(is.numeric(sby_seed) && length(sby_seed) == 1L && !is.na(sby_seed) && is.finite(sby_seed))){
 
     # Aborta quando a semente nao atende ao contrato esperado
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = "'sby_seed' deve ser escalar numerico"
     )
   }

@@ -15,7 +15,7 @@ sby_validate_logical_scalar <- function(sby_value, sby_name){
   if(!(is.logical(sby_value) && length(sby_value) == 1L && !is.na(sby_value))){
 
     # Aborta com mensagem descritiva para parametro logico invalido
-    sby_over_under_abort(
+    sby_adanear_abort(
       sby_message = paste0(
         "'",
         sby_name,

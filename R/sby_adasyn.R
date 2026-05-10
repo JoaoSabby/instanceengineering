@@ -1,10 +1,48 @@
 #' Aplicar sobreamostragem ADASYN em dados binarios
 #'
 #' @details
-#' A funcao compoe a interface publica do pacote e valida os contratos de entrada antes de executar a etapa principal
-#' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
-#' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
+#' A interface KNN foi unificada em tres parametros publicos: `sby_knn_engine`,
+#' `sby_knn_algorithm` e `sby_distance_metric`. O argumento
+#' `sby_knn_algorithm` concentra tanto as estrategias exatas do FNN quanto os
+#' algoritmos antes associados ao BiocNeighbors. A etapa de padronizacao por
+#' Z-score continua sendo executada antes da busca; quando `sby_distance_metric`
+#' e `"ip"` ou `"cosine"`, as matrizes de referencia e consulta recebem tambem
+#' normalizacao L2 interna obrigatoria antes da submissao ao engine KNN.
 #'
+#' Compatibilidade entre engines, algoritmos e metricas:
+#'
+#' | Engine | Algoritmos em `sby_knn_algorithm` | Tipo de busca | Metricas suportadas |
+#' |---|---|---|---|
+#' | FNN | `auto`, `kd_tree`, `cover_tree`, `brute` | Busca exata | `euclidean` |
+#' | BiocNeighbors | `Kmknn`, `Vptree`, `Exhaustive` | Busca exata | `euclidean`, `cosine` |
+#' | BiocNeighbors | `Annoy`, `Hnsw` | Busca aproximada | `euclidean`, `cosine` |
+#' | RcppHNSW | gerido internamente | Busca aproximada | `euclidean`, `cosine`, `ip` |
+#'
+#' Metricas disponiveis:
+#'
+#' * `euclidean`: distancia em linha reta no espaco continuo e padrao universal
+#'   para KNN, definida por \eqn{d(x, y) = \sqrt{\sum (x_i - y_i)^2}}.
+#' * `ip`: produto interno convertido em distancia por
+#'   \eqn{d(x, y) = 1 - \sum x_i y_i}. E a alternativa computacionalmente mais
+#'   rapida em engines vetorizados, mas aciona obrigatoriamente normalizacao L2
+#'   automatica das matrizes apos o Z-score e antes da busca.
+#' * `cosine`: similaridade angular espelhada como distancia por
+#'   \eqn{d(x, y) = 1 - \frac{\sum x_i y_i}{\sqrt{\sum x_i^2} \sqrt{\sum y_i^2}}}.
+#'   Tambem aciona normalizacao L2 interna em engines aproximados para favorecer
+#'   desempenho vetorial e coerencia numerica.
+#'
+#' O engine FNN e explicitamente bloqueado para `ip` e `cosine`, pois sua
+#' implementacao nativa no pacote suporta somente distancia euclidiana. O produto
+#' interno e aceito exclusivamente por `sby_knn_engine = "RcppHNSW"`.
+#'
+#' @references
+#' He, H., Bai, Y., Garcia, E. A., & Li, S. (2008). ADASYN: Adaptive synthetic
+#' sampling approach for imbalanced learning. IEEE International Joint Conference
+#' on Neural Networks.
+#'
+#' Malkov, Y. A., & Yashunin, D. A. (2018). Efficient and robust approximate
+#' nearest neighbor search using hierarchical navigable small world graphs. IEEE
+#' Transactions on Pattern Analysis and Machine Intelligence.
 #' @title Aplicar sobreamostragem ADASYN em dados binarios
 #' @name sby_adasyn
 #' @param sby_predictor_data Data frame ou matriz com variaveis preditoras numericas
@@ -15,12 +53,12 @@
 #' @param sby_audit Indicador logico para retornar metadados completos de auditoria
 #' @param sby_return_scaled Indicador logico para incluir matriz escalada na auditoria
 #' @param sby_restore_types Indicador logico para restaurar tipos numericos originais ao final
-#' @param sby_knn_algorithm Algoritmo usado pelo backend FNN para busca de vizinhos proximos
-#' @param sby_knn_backend Backend usado para calcular vizinhos proximos
-#' @param sby_knn_workers Numero de workers usado por backends paralelizaveis
-#' @param sby_bioc_neighbor_algorithm Algoritmo usado pelo backend BiocNeighbors
-#' @param sby_hnsw_m Parametro de conectividade do indice HNSW no backend RcppHNSW
-#' @param sby_hnsw_ef Tamanho da lista dinamica de construcao e busca HNSW no backend RcppHNSW
+#' @param sby_knn_algorithm Algoritmo KNN unificado usado pelo engine selecionado
+#' @param sby_knn_engine Engine usado para calcular vizinhos proximos
+#' @param sby_distance_metric Metrica de distancia para a busca KNN
+#' @param sby_knn_workers Numero de workers usado por engines paralelizaveis
+#' @param sby_hnsw_m Parametro de conectividade do indice HNSW no engine RcppHNSW
+#' @param sby_hnsw_ef Tamanho da lista dinamica de construcao e busca HNSW no engine RcppHNSW
 #'
 #' @return Tibble balanceado quando `sby_audit = FALSE`; lista de auditoria quando `sby_audit = TRUE`
 #' @export
@@ -33,10 +71,10 @@ sby_adasyn <- function(
   sby_audit = FALSE,
   sby_return_scaled = FALSE,
   sby_restore_types = TRUE,
-  sby_knn_algorithm = c("auto", "cover_tree", "kd_tree", "brute"),
-  sby_knn_backend = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
+  sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
+  sby_distance_metric = c("euclidean", "ip", "cosine"),
   sby_knn_workers = 1L,
-  sby_bioc_neighbor_algorithm = c("auto", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
 ){
@@ -58,15 +96,15 @@ sby_adasyn <- function(
     sby_name  = "sby_restore_types"
   )
 
-  # Resolve opcoes declaradas de algoritmo e backend KNN
+  # Resolve opcoes declaradas de algoritmo e engine KNN
   sby_knn_algorithm <- match.arg(
     arg = sby_knn_algorithm
   )
-  sby_knn_backend <- match.arg(
-    arg = sby_knn_backend
+  sby_knn_engine <- match.arg(
+    arg = sby_knn_engine
   )
-  sby_bioc_neighbor_algorithm <- match.arg(
-    arg = sby_bioc_neighbor_algorithm
+  sby_distance_metric <- match.arg(
+    arg = sby_distance_metric
   )
 
   # Valida recursos paralelos e parametros HNSW
@@ -106,14 +144,15 @@ sby_adasyn <- function(
     sby_predictor_data = sby_predictor_data
   )
 
-  # Resolve algoritmo e backend KNN automaticos conforme dados e workers
-  sby_knn_algorithm <- sby_resolve_knn_algorithm(
-    sby_knn_algorithm           = sby_knn_algorithm,
-    sby_predictor_column_count = NCOL(sby_x_matrix)
-  )
-  sby_knn_backend <- sby_resolve_knn_backend(
-    sby_knn_backend = sby_knn_backend,
+  # Resolve engine e algoritmo KNN automaticos conforme dados e workers
+  sby_knn_engine <- sby_resolve_knn_engine(
+    sby_knn_engine = sby_knn_engine,
     sby_knn_workers = sby_knn_workers
+  )
+  sby_knn_algorithm <- sby_resolve_knn_algorithm(
+    sby_knn_algorithm          = sby_knn_algorithm,
+    sby_predictor_column_count = NCOL(sby_x_matrix),
+    sby_knn_engine             = sby_knn_engine
   )
 
   # Prepara alvo, metadados de tipos e matriz padronizada para ADASYN
@@ -152,9 +191,9 @@ sby_adasyn <- function(
     sby_synthetic_count          = sby_synthetic_count,
     sby_k_over                   = sby_k_over,
     sby_knn_algorithm            = sby_knn_algorithm,
-    sby_knn_backend              = sby_knn_backend,
+    sby_knn_engine              = sby_knn_engine,
+    sby_distance_metric          = sby_distance_metric,
     sby_knn_workers              = sby_knn_workers,
-    sby_bioc_neighbor_algorithm  = sby_bioc_neighbor_algorithm,
     sby_hnsw_m                   = sby_hnsw_m,
     sby_hnsw_ef                  = sby_hnsw_ef
   )
@@ -198,20 +237,10 @@ sby_adasyn <- function(
     sby_target_vector  = sby_adasyn_result$y
   )
 
-  # Define metadado do algoritmo BiocNeighbors usado no diagnostico
-  sby_diagnostic_bioc_neighbor_algorithm <- ifelse(
-    test = identical(
-      x = sby_knn_backend,
-      y = "BiocNeighbors"
-    ),
-    yes = sby_bioc_neighbor_algorithm,
-    no  = NA_character_
-  )
-
   # Define metadado de conectividade HNSW usado no diagnostico
   sby_diagnostic_hnsw_m <- ifelse(
     test = identical(
-      x = sby_knn_backend,
+      x = sby_knn_engine,
       y = "RcppHNSW"
     ),
     yes = sby_hnsw_m,
@@ -221,7 +250,7 @@ sby_adasyn <- function(
   # Define metadado de busca HNSW usado no diagnostico
   sby_diagnostic_hnsw_ef <- ifelse(
     test = identical(
-      x = sby_knn_backend,
+      x = sby_knn_engine,
       y = "RcppHNSW"
     ),
     yes = sby_hnsw_ef,
@@ -233,9 +262,9 @@ sby_adasyn <- function(
     sby_input_rows                = NROW(sby_x_matrix),
     sby_output_rows               = nrow(sby_balanced_data),
     sby_generated_rows            = nrow(sby_balanced_data) - nrow(sby_x_matrix),
-    sby_knn_backend               = sby_knn_backend,
+    sby_knn_engine               = sby_knn_engine,
+    sby_distance_metric           = sby_distance_metric,
     sby_knn_workers               = sby_knn_workers,
-    sby_bioc_neighbor_algorithm   = sby_diagnostic_bioc_neighbor_algorithm,
     sby_hnsw_m                    = sby_diagnostic_hnsw_m,
     sby_hnsw_ef                   = sby_diagnostic_hnsw_ef,
     sby_input_class_distribution  = table(sby_target_factor),

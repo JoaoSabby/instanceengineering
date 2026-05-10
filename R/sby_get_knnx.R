@@ -8,9 +8,8 @@
 #' @param sby_query Matriz de consulta para busca KNN
 #' @param sby_k Numero de vizinhos solicitados
 #' @param sby_knn_algorithm Algoritmo KNN configurado
-#' @param sby_knn_backend Backend KNN configurado
+#' @param sby_knn_engine Engine KNN configurado
 #' @param sby_knn_workers Numero de workers KNN configurado
-#' @param sby_bioc_neighbor_algorithm Algoritmo BiocNeighbors configurado
 #' @param sby_hnsw_m Conectividade HNSW configurada
 #' @param sby_hnsw_ef Lista dinamica HNSW configurada
 #' @param sby_knn_query_chunk_size Tamanho de bloco para consultas KNN
@@ -22,9 +21,9 @@ sby_get_knnx <- function(
   sby_query,
   sby_k,
   sby_knn_algorithm,
-  sby_knn_backend,
+  sby_knn_engine,
+  sby_distance_metric,
   sby_knn_workers,
-  sby_bioc_neighbor_algorithm,
   sby_hnsw_m,
   sby_hnsw_ef,
   sby_knn_query_chunk_size = getOption("instanceengineering.sby_knn_query_chunk_size", 1000L)
@@ -38,11 +37,38 @@ sby_get_knnx <- function(
     sby_knn_query_chunk_size = sby_knn_query_chunk_size
   )
 
-  # Executa consulta pelo backend FNN quando selecionado
+  # Aplica normalizacao L2 obrigatoria para metricas angulares ou produto interno
+  if(!identical(
+    x = sby_distance_metric,
+    y = "euclidean"
+  )){
+
+    # Normaliza referencia e consulta depois do z-score e antes do engine KNN
+    sby_data  <- SbyNormalizeL2(
+      sby_x_matrix = sby_data
+    )
+    sby_query <- SbyNormalizeL2(
+      sby_x_matrix = sby_query
+    )
+  }
+
+  # Executa consulta pelo engine FNN quando selecionado
   if(identical(
-    x = sby_knn_backend,
+    x = sby_knn_engine,
     y = "FNN"
   )){
+
+    # Bloqueia metricas nao euclidianas porque FNN implementa apenas distancia euclidiana neste pacote
+    if(!identical(
+      x = sby_distance_metric,
+      y = "euclidean"
+    )){
+
+      # Aborta combinacao incompatvel para evitar regressao silenciosa de metrica
+      sby_adanear_abort(
+        sby_message = "'sby_knn_engine = FNN' suporta apenas 'sby_distance_metric = euclidean'"
+      )
+    }
 
     # Verifica disponibilidade do pacote FNN
     if(!requireNamespace(
@@ -50,9 +76,18 @@ sby_get_knnx <- function(
       quietly = TRUE
     )){
 
-      # Aborta quando o backend FNN nao esta instalado
+      # Aborta quando o engine FNN nao esta instalado
       sby_adanear_abort(
-        sby_message = "'sby_knn_backend = FNN' requer o pacote FNN"
+        sby_message = "'sby_knn_engine = FNN' requer o pacote FNN"
+      )
+    }
+
+    # Bloqueia algoritmos exclusivos dos outros engines no FNN
+    if(!(sby_knn_algorithm %in% c("auto", "kd_tree", "cover_tree", "brute"))){
+
+      # Aborta algoritmo incompatvel com FNN
+      sby_adanear_abort(
+        sby_message = "'sby_knn_algorithm' deve ser um de 'auto', 'kd_tree', 'cover_tree' ou 'brute' quando 'sby_knn_engine = FNN'"
       )
     }
 
@@ -75,13 +110,13 @@ sby_get_knnx <- function(
     # Verifica se ha solicitacao de interrupcao apos consulta FNN
     sby_adanear_check_user_interrupt()
 
-    # Retorna resultado KNN produzido pelo backend FNN
+    # Retorna resultado KNN produzido pelo engine FNN
     return(sby_knn_result)
   }
 
-  # Executa consulta pelo backend RcppHNSW quando selecionado
+  # Executa consulta pelo engine RcppHNSW quando selecionado
   if(identical(
-    x = sby_knn_backend,
+    x = sby_knn_engine,
     y = "RcppHNSW"
   )){
 
@@ -91,9 +126,9 @@ sby_get_knnx <- function(
       quietly = TRUE
     )){
 
-      # Aborta quando o backend RcppHNSW nao esta instalado
+      # Aborta quando o engine RcppHNSW nao esta instalado
       sby_adanear_abort(
-        sby_message = "'sby_knn_backend = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW')."
+        sby_message = "'sby_knn_engine = RcppHNSW' requer o pacote RcppHNSW. Instale-o com install.packages('RcppHNSW')."
       )
     }
 
@@ -109,7 +144,7 @@ sby_get_knnx <- function(
     # Constroi indice HNSW para a matriz de referencia
     sby_hnsw_index <- RcppHNSW::hnsw_build(
       X = sby_data,
-      distance = "euclidean",
+      distance = sby_distance_metric,
       M = as.integer(sby_hnsw_m),
       ef = sby_effective_ef,
       verbose = FALSE,
@@ -158,7 +193,7 @@ sby_get_knnx <- function(
     # Verifica se ha solicitacao de interrupcao apos consulta HNSW
     sby_adanear_check_user_interrupt()
 
-    # Retorna resultado KNN produzido pelo backend HNSW
+    # Retorna resultado KNN produzido pelo engine HNSW
     return(sby_knn_result)
   }
 
@@ -171,22 +206,23 @@ sby_get_knnx <- function(
     quietly = TRUE
   )){
 
-    # Aborta quando dependencias do backend BiocNeighbors estao ausentes
+    # Aborta quando dependencias do engine BiocNeighbors estao ausentes
     sby_adanear_abort(
-      sby_message = "'sby_knn_backend = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel'))."
+      sby_message = "'sby_knn_engine = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel'))."
     )
   }
 
   # Cria parametros de vizinhanca e paralelismo para BiocNeighbors
   sby_neighbor_param <- sby_create_bioc_neighbor_param(
-    sby_bioc_neighbor_algorithm = sby_bioc_neighbor_algorithm,
-    sby_predictor_column_count  = NCOL(sby_data)
+    sby_knn_algorithm          = sby_knn_algorithm,
+    sby_predictor_column_count = NCOL(sby_data),
+    sby_distance_metric        = sby_distance_metric
   )
   sby_parallel_param <- sby_create_knn_bioc_parallel_param(
     sby_knn_workers = sby_knn_workers
   )
 
-  # Executa consulta KNN pelo backend BiocNeighbors
+  # Executa consulta KNN pelo engine BiocNeighbors
   sby_knn_result <- BiocNeighbors::queryKNN(
     X = sby_data,
     query = sby_query,
