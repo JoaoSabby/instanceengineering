@@ -1,16 +1,31 @@
-
 #' Verificar interrupcao solicitada pelo usuario
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @return Retorna invisivelmente TRUE apos a verificacao de interrupcao
 #' @noRd
-sby_over_under_check_user_interrupt <- function() {
-  if (sby_over_under_native_available()) {
-    .Call("OU_CheckUserInterruptC", PACKAGE = "instanceengineering")
-  } else {
-    Sys.sleep(0)
+sby_over_under_check_user_interrupt <- function(){
+  # Utiliza rotina nativa de interrupcao quando disponivel
+  if(sby_over_under_native_available()){
+
+    # Aciona ponto de interrupcao implementado em codigo nativo
+    .Call(
+      "OU_CheckUserInterruptC",
+      PACKAGE = "instanceengineering"
+    )
+  }else{
+
+    # Executa pausa nula para permitir processamento cooperativo de interrupcoes
+    Sys.sleep(
+      time = 0
+    )
   }
 
-  invisible(TRUE)
+  # Retorna sucesso invisivel apos a checagem de interrupcao
+  return(invisible(TRUE))
 }
-
 ####
 ## Fim
 #

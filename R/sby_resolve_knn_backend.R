@@ -1,22 +1,35 @@
-
 #' Resolver backend KNN automatico quando solicitado
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_knn_backend Backend KNN informado pelo chamador
+#' @param sby_knn_workers Numero de workers validado para consulta KNN
+#'
+#' @return Nome do backend KNN resolvido
 #' @noRd
-sby_resolve_knn_backend <- function(sby_knn_backend, sby_knn_workers) {
-  if (!identical(sby_knn_backend, "auto")) {
+sby_resolve_knn_backend <- function(sby_knn_backend, sby_knn_workers){
+  # Retorna backend explicito quando modo automatico nao foi solicitado
+  if(!identical(
+    x = sby_knn_backend,
+    y = "auto"
+  )){
+
+    # Mantem a escolha explicita do chamador
     return(sby_knn_backend)
   }
 
-  if (sby_knn_workers > 1L) {
-    if (requireNamespace("BiocNeighbors", quietly = TRUE) && requireNamespace("BiocParallel", quietly = TRUE)) {
-      return("BiocNeighbors")
-    }
+  # Seleciona backend paralelizavel quando mais de um worker foi solicitado
+  if(sby_knn_workers > 1L){
 
-    sby_over_under_warn("'sby_knn_workers > 1' foi solicitado, mas BiocNeighbors/BiocParallel nao estao instalados; usando FNN sem paralelismo.")
+    # Retorna backend BiocNeighbors para execucao com workers multiplos
+    return("BiocNeighbors")
   }
 
-  "FNN"
+  # Retorna backend FNN como caminho padrao sequencial
+  return("FNN")
 }
-
 ####
 ## Fim
 #

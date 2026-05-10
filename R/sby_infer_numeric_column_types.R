@@ -1,29 +1,76 @@
-
 #' Inferir tipos numericos para restauracao posterior
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_data_frame Dados preditores numericos usados para inferencia de tipos
+#'
+#' @return Data frame com nomes de colunas e tipos numericos inferidos
 #' @noRd
-sby_infer_numeric_column_types <- function(sby_data_frame) {
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(sby_data_frame)
-  sby_column_names <- sby_over_under_get_column_names(sby_data_frame)
+sby_infer_numeric_column_types <- function(sby_data_frame){
+  # Converte dados de entrada para matriz numerica padronizada
+  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+    sby_predictor_data = sby_data_frame
+  )
 
-  sby_infer_one <- function(sby_column_data) {
-    sby_unique_values <- sort(unique(sby_column_data))
-    if (length(sby_unique_values) <= 2L && all(sby_unique_values %in% c(0, 1))) {
+  # Captura nomes de colunas associados aos preditores
+  sby_column_names <- sby_over_under_get_column_names(
+    sby_predictor_data = sby_data_frame
+  )
+
+  #' Inferir tipo numerico de uma coluna isolada
+  #'
+  #' @details
+  #' A funcao local classifica valores numericos em categorias discretas ou continuas para apoiar restauracao posterior de tipos
+  #'
+  #' @param sby_column_data Vetor numerico correspondente a uma coluna preditora
+  #'
+  #' @return Marcador textual do tipo numerico inferido
+  #' @noRd
+  sby_infer_one <- function(sby_column_data){
+    # Obtem valores unicos ordenados para classificar colunas binarias
+    sby_unique_values <- sort(
+      x = unique(sby_column_data)
+    )
+
+    # Identifica coluna binaria codificada numericamente
+    if(length(sby_unique_values) <= 2L && all(sby_unique_values %in% c(0, 1))){
+
+      # Retorna marcador de tipo binario
       return("binary")
     }
+
+    # Verifica se todos os valores sao equivalentes a inteiros
     sby_is_integer_like <- all(abs(sby_column_data - round(sby_column_data)) < sqrt(.Machine$double.eps))
-    if (sby_is_integer_like) {
+
+    # Identifica coluna numerica com semantica inteira
+    if(sby_is_integer_like){
+
+      # Retorna marcador de tipo inteiro
       return("integer")
     }
-    "double"
+
+    # Retorna marcador de tipo numerico continuo
+    return("double")
   }
 
-  data.frame(
+  # Retorna metadados de tipos inferidos por coluna
+  return(data.frame(
     sby_column_name = sby_column_names,
-    sby_inferred_type = vapply(seq_len(NCOL(sby_x_matrix)), function(j) sby_infer_one(sby_x_matrix[, j]), character(1L)),
+    sby_inferred_type = vapply(
+      X = seq_len(NCOL(sby_x_matrix)),
+      FUN = function(j){
+        # Infere o tipo da coluna corrente da matriz numerica
+        return(sby_infer_one(
+          sby_column_data = sby_x_matrix[, j]
+        ))
+      },
+      FUN.VALUE = character(1L)
+    ),
     stringsAsFactors = FALSE
-  )
+  ))
 }
-
 ####
 ## Fim
 #

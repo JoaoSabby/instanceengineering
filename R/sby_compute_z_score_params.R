@@ -1,33 +1,77 @@
-
 #' Calcular parametros de z-score
+#'
+#' @details
+#' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
+#' A documentacao descreve a intencao operacional para apoiar manutencao, auditoria e revisao tecnica do pacote
+#'
+#' @param sby_x_matrix Matriz numerica usada para estimar centro e escala
+#'
+#' @return Lista com vetores numericos `centers` e `scales`
 #' @noRd
-sby_compute_z_score_params <- function(sby_x_matrix) {
-  sby_x_matrix <- sby_over_under_as_numeric_matrix(sby_x_matrix)
+sby_compute_z_score_params <- function(sby_x_matrix){
+  # Normaliza entrada para matriz numerica de precisao dupla
+  sby_x_matrix <- sby_over_under_as_numeric_matrix(
+    sby_predictor_data = sby_x_matrix
+  )
 
-  if (sby_over_under_native_available()) {
-    sby_params <- .Call("OU_ComputeZScoreParamsC", sby_x_matrix, PACKAGE = "instanceengineering")
-  } else {
+  # Calcula parametros por rotina nativa quando disponivel
+  if(sby_over_under_native_available()){
+
+    # Estima centros e escalas por chamada nativa registrada no pacote
+    sby_params <- .Call(
+      "OU_ComputeZScoreParamsC",
+      sby_x_matrix,
+      PACKAGE = "instanceengineering"
+    )
+  }else{
+
+    # Estima centros e escalas por funcoes vetorizadas em R
     sby_params <- list(
       centers = Rfast::colmeans(sby_x_matrix),
-      scales = Rfast::colVars(sby_x_matrix, std = TRUE)
+      scales  = Rfast::colVars(
+        x = sby_x_matrix,
+        std = TRUE
+      )
     )
   }
 
+  # Identifica escalas ausentes, infinitas ou nao positivas
   sby_invalid <- is.na(sby_params$scales) | !is.finite(sby_params$scales) | sby_params$scales <= 0
-  if (any(sby_invalid)) {
+
+  # Verifica se todas as colunas possuem desvio padrao valido
+  if(any(sby_invalid)){
+
+    # Captura nomes de colunas para mensagem de erro diagnostica
     sby_column_names <- colnames(sby_x_matrix)
-    if (is.null(sby_column_names)) {
-      sby_column_names <- paste0("V", seq_len(NCOL(sby_x_matrix)))
+
+    # Gera nomes padronizados quando a matriz nao possui nomes
+    if(is.null(sby_column_names)){
+
+      # Cria nomes sequenciais para as colunas invalidas
+      sby_column_names <- paste0(
+        "V",
+        seq_len(NCOL(sby_x_matrix))
+      )
     }
-    sby_over_under_abort(paste0(
-      "Colunas com desvio padrao zero ou indefinido: ",
-      paste(sby_column_names[sby_invalid], collapse = ", ")
-    ))
+
+    # Aborta informando colunas com escala indefinida
+    sby_over_under_abort(
+      sby_message = paste0(
+        "Colunas com desvio padrao zero ou indefinido: ",
+        paste(
+          sby_column_names[sby_invalid],
+          collapse = ", "
+        )
+      )
+    )
   }
 
-  list(centers = as.numeric(sby_params$centers), scales = as.numeric(sby_params$scales))
+  # Retorna parametros de escala em formato numerico simples
+  return(list(
+    centers = as.numeric(sby_params$centers),
+    scales  = as.numeric(sby_params$scales)
+  ))
 }
-
 ####
 ## Fim
 #
