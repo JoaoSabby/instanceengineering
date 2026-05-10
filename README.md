@@ -34,6 +34,7 @@ A API foi padronizada com as seguintes regras:
 ## Funções principais
 
 ```r
+# Balanceamento over sampling ADASYN e under sampling NEARMISS
 sby_adanear(
   sby_predictor_data,
   sby_target_vector,
@@ -45,6 +46,7 @@ sby_adanear(
   sby_audit = FALSE
 )
 
+# Balanceamento over sampling ADASYN 
 sby_adasyn(
   sby_predictor_data,
   sby_target_vector,
@@ -54,6 +56,7 @@ sby_adasyn(
   sby_audit = FALSE
 )
 
+# Balanceamento under sampling NearMiss-1
 sby_nearmiss(
   sby_predictor_data,
   sby_target_vector,
@@ -63,6 +66,7 @@ sby_nearmiss(
   sby_audit = FALSE
 )
 
+# Balanceamento over sampling ADASYN e under sampling NEARMISS para step recipes
 sby_step_adanear(
   sby_recipe,
   ...,
@@ -76,15 +80,18 @@ sby_step_adanear(
 ## Exemplo rápido
 
 ```r
-library(instanceengineering)
+library(instenginer)
 
-set.seed(1)
-sby_x <- data.frame(
+set.seed(42)
+sby_x <- tibble(
   sby_a = rnorm(40),
   sby_b = rnorm(40)
 )
+
+# Classes binarias
 sby_y <- factor(c(rep("minority", 10), rep("majority", 30)))
 
+# Balanceamento hibrido
 sby_balanced <- sby_adanear(
   sby_predictor_data = sby_x,
   sby_target_vector = sby_y,
@@ -98,6 +105,7 @@ sby_balanced
 Para obter auditoria completa:
 
 ```r
+# Balanceamento hibrido com auditoria
 sby_audit <- sby_adanear(
   sby_predictor_data = sby_x,
   sby_target_vector = sby_y,
