@@ -137,8 +137,8 @@ sby_step_adanear <- function(
 
   # Adiciona etapa configurada ao objeto recipe
   return(recipes::add_step(
-    object = sby_recipe,
-    step = sby_step_adanear_new(
+    rec = sby_recipe,
+    object = sby_step_adanear_new(
       sby_terms                   = sby_terms,
       sby_role                    = sby_role,
       sby_trained                 = sby_trained,
