@@ -44,6 +44,7 @@ sby_nearmiss <- function(
   sby_hnsw_m = 16L,
   sby_hnsw_ef = 200L
 ){
+  
   # Verifica se ha solicitacao de interrupcao pelo usuario
   sby_over_under_check_user_interrupt()
 
@@ -115,6 +116,7 @@ sby_nearmiss <- function(
   sby_x_matrix <- sby_over_under_as_numeric_matrix(
     sby_predictor_data = sby_predictor_data
   )
+  
   colnames(sby_x_matrix) <- sby_over_under_get_column_names(
     sby_predictor_data = sby_predictor_data
   )
@@ -215,14 +217,17 @@ sby_nearmiss <- function(
     sby_retained_index <- seq_len(
       length.out = nrow(sby_x_scaled)
     )
+    
     sby_reduced_scaled <- sby_x_scaled
     sby_reduced_target <- sby_target_factor
+    
   }else{
 
     # Identifica rotulos e indices das classes minoritaria e majoritaria
     sby_class_roles    <- sby_get_binary_class_roles(
       sby_target_factor = sby_target_factor
     )
+    
     sby_minority_index <- which(
       x = sby_target_factor == sby_class_roles$sby_minority_label
     )
