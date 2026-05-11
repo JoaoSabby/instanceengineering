@@ -1,53 +1,101 @@
 \name{sby_adanear}
 \alias{sby_adanear}
-\alias{sby_adasyn}
-\alias{sby_nearmiss}
-\title{High-performance binary over/under sampling}
-\description{Runs ADASYN oversampling, NearMiss-1 undersampling, or the combined ADASYN + NearMiss pipeline with a unified KNN engine, algorithm, and distance-metric interface.}
+\title{Executar balanceamento combinado ADASYN e NearMiss-1}
+\description{
+\code{sby_adanear()} executa um pipeline híbrido de balanceamento para problemas
+binários: primeiro aplica ADASYN para expandir adaptativamente a classe
+minoritária e, em seguida, aplica NearMiss-1 para reduzir a classe majoritária.
+O objetivo é combinar geração sintética em regiões difíceis com retenção
+seletiva de exemplos majoritários próximos à fronteira de decisão.
+}
 \usage{
-sby_adanear(sby_predictor_data, sby_target_vector, sby_over_ratio = 0.2, sby_under_ratio = 0.5, sby_k_over = 5L, sby_k_under = 5L, sby_seed = 42L, sby_audit = FALSE, sby_restore_types = TRUE, sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"), sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"), sby_distance_metric = c("euclidean", "ip", "cosine"), sby_knn_workers = 1L, sby_hnsw_m = 16L, sby_hnsw_ef = 200L)
-sby_adasyn(sby_predictor_data, sby_target_vector, sby_over_ratio = 0.2, sby_k_over = 5L, sby_seed = 42L, sby_audit = FALSE, sby_return_scaled = FALSE, sby_restore_types = TRUE, sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"), sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"), sby_distance_metric = c("euclidean", "ip", "cosine"), sby_knn_workers = 1L, sby_hnsw_m = 16L, sby_hnsw_ef = 200L)
-sby_nearmiss(sby_predictor_data, sby_target_vector, sby_under_ratio = 0.5, sby_k_under = 5L, sby_seed = 42L, sby_audit = FALSE, sby_precomputed_scaling = NULL, sby_input_already_scaled = FALSE, sby_restore_types = TRUE, sby_type_info = NULL, sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"), sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"), sby_distance_metric = c("euclidean", "ip", "cosine"), sby_knn_workers = 1L, sby_hnsw_m = 16L, sby_hnsw_ef = 200L)
+sby_adanear(
+  sby_predictor_data,
+  sby_target_vector,
+  sby_over_ratio = 0.2,
+  sby_under_ratio = 0.5,
+  sby_k_over = 5L,
+  sby_k_under = 5L,
+  sby_seed = 42L,
+  sby_audit = FALSE,
+  sby_restore_types = TRUE,
+  sby_knn_algorithm = c(
+    "auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"
+  ),
+  sby_knn_engine = c(
+    "auto", "FNN", "BiocNeighbors", "RcppHNSW"
+  ),
+  sby_distance_metric = c(
+    "euclidean", "ip", "cosine"
+  ),
+  sby_knn_workers = 1L,
+  sby_hnsw_m = 16L,
+  sby_hnsw_ef = 200L
+)
+
 }
 \arguments{
-\item{sby_predictor_data}{Numeric predictors as a data frame or matrix.}
-\item{sby_target_vector}{Binary target vector.}
-\item{sby_over_ratio, sby_under_ratio}{Oversampling expansion and majority-retention ratios.}
-\item{sby_k_over, sby_k_under}{Nearest-neighbor counts for ADASYN and NearMiss-1.}
-\item{sby_seed}{Random seed.}
-\item{sby_audit, sby_return_scaled, sby_restore_types}{Logical controls for audit output, scaled matrix retention, and numeric type restoration.}
-\item{sby_precomputed_scaling, sby_input_already_scaled, sby_type_info}{Optional scaling and type metadata for internal chaining.}
-\item{sby_knn_algorithm}{Unified KNN algorithm selector.}
-\item{sby_knn_engine}{KNN engine: \code{"auto"}, \code{"FNN"}, \code{"BiocNeighbors"}, or \code{"RcppHNSW"}.}
-\item{sby_distance_metric}{Distance metric: \code{"euclidean"}, \code{"ip"}, or \code{"cosine"}.}
-\item{sby_knn_workers}{Number of KNN workers/threads.}
-\item{sby_hnsw_m, sby_hnsw_ef}{RcppHNSW index connectivity and effort parameters.}
+\item{sby_predictor_data}{Data frame, tibble ou matriz contendo variáveis preditoras numéricas. Não possui valor padrão e deve estar alinhado ao vetor alvo. Esse objeto define o espaço comum no qual serão calculadas tanto a dificuldade adaptativa do ADASYN quanto a proximidade NearMiss-1.}
+\item{sby_target_vector}{Vetor atômico ou fator com exatamente duas classes e comprimento igual ao número de linhas de \code{sby_predictor_data}. Não possui valor padrão. A distribuição desse vetor determina a classe minoritária a ser expandida e a classe majoritária a ser reduzida.}
+\item{sby_over_ratio}{Valor numérico escalar que controla a intensidade da sobreamostragem ADASYN antes da etapa NearMiss. O padrão é \code{0.2}. Valores maiores inserem mais exemplos sintéticos antes da subamostragem, podendo melhorar cobertura da minoria, mas também propagando ruído em regiões ambíguas.}
+\item{sby_under_ratio}{Valor numérico escalar que controla a fração da classe majoritária retida depois da sobreamostragem. O padrão é \code{0.5}. Valores menores tornam o pipeline mais agressivo na redução majoritária; valores maiores preservam mais observações originais e tendem a manter maior diversidade majoritária.}
+\item{sby_k_over}{Número inteiro positivo de vizinhos usados pela etapa ADASYN para estimar dificuldade local e gerar amostras sintéticas. O padrão é \code{5L}. Essa escolha influencia onde a expansão minoritária será concentrada e o grau de suavização da avaliação local.}
+\item{sby_k_under}{Número inteiro positivo de vizinhos minoritários usados pela etapa NearMiss-1 para ranquear observações majoritárias. O padrão é \code{5L}. Essa escolha controla a sensibilidade da retenção majoritária à fronteira local criada após a sobreamostragem.}
+\item{sby_seed}{Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios nas duas etapas do pipeline. O padrão é \code{42L}. Uma semente fixa garante reprodutibilidade conjunta das amostras sintéticas, desempates, índices retidos e diagnósticos finais.}
+\item{sby_audit}{Indicador lógico escalar que controla se o retorno deve incluir resultados intermediários das etapas ADASYN e NearMiss. O padrão é \code{FALSE}, retornando somente os dados balanceados finais. Quando \code{TRUE}, o retorno passa a ser uma lista com auditoria completa, útil para inspeção de contagens e validação experimental.}
+\item{sby_restore_types}{Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados ao final do pipeline. O padrão é \code{TRUE}. Mantê-lo ativado facilita reintegração com bases tabulares originais; desativá-lo mantém a saída no formato numérico produzido pelas transformações internas.}
+\item{sby_knn_algorithm}{String escalar escolhida entre \code{"auto"}, \code{"kd_tree"}, \code{"cover_tree"}, \code{"brute"}, \code{"Kmknn"}, \code{"Vptree"}, \code{"Exhaustive"}, \code{"Annoy"} e \code{"Hnsw"}. O padrão é resolvido como \code{"auto"}. O mesmo algoritmo resolvido é usado nas etapas de sobreamostragem e subamostragem, garantindo consistência geométrica ao longo do pipeline.}
+\item{sby_knn_engine}{String escalar escolhida entre \code{"auto"}, \code{"FNN"}, \code{"BiocNeighbors"} e \code{"RcppHNSW"}. O padrão é resolvido como \code{"auto"}. O engine selecionado determina a implementação KNN compartilhada pelas duas etapas e afeta velocidade, memória, paralelismo e suporte a métricas.}
+\item{sby_distance_metric}{String escalar escolhida entre \code{"euclidean"}, \code{"ip"} e \code{"cosine"}. O padrão é \code{"euclidean"}. A métrica define simultaneamente a geometria da geração sintética e da retenção majoritária, podendo alterar tanto a localização dos pontos sintéticos quanto os exemplos majoritários preservados.}
+\item{sby_knn_workers}{Número inteiro positivo de workers usados nas consultas KNN quando o engine efetivo oferece suporte. O padrão é \code{1L}. Aumentar esse número pode acelerar o pipeline completo, mas eleva uso de recursos e deve ser compatível com o backend escolhido.}
+\item{sby_hnsw_m}{Número inteiro positivo que controla a conectividade do grafo HNSW no engine \code{RcppHNSW}. O padrão é \code{16L}. Valores maiores tendem a melhorar recall nas duas etapas do pipeline, com maior consumo de memória e tempo de construção do índice.}
+\item{sby_hnsw_ef}{Número inteiro positivo que controla a largura dinâmica de exploração do HNSW. O padrão é \code{200L}. Valores maiores tornam a busca aproximada mais precisa e estável para ADASYN e NearMiss, mas aumentam a latência das consultas. }
 }
-\value{A balanced tibble when \code{sby_audit = FALSE}; otherwise an audit list.}
-\details{The KNN interface is unified by \code{sby_knn_engine}, \code{sby_knn_algorithm}, and
-\code{sby_distance_metric}. Z-score standardization is applied before nearest-neighbor
-search; when \code{sby_distance_metric} is \code{"ip"} or \code{"cosine"}, the reference
-and query matrices are also internally L2-normalized after Z-score scaling and before
-submission to the KNN engine.
+\value{Tibble balanceado quando \code{sby_audit = FALSE}; lista com resultados de sobreamostragem, subamostragem, dados finais e diagnósticos quando \code{sby_audit = TRUE}.}
+\details{
+A função utiliza uma arquitetura de busca espacial configurável para calcular
+vizinhos próximos sobre preditores numéricos previamente padronizados por
+Z-score. A seleção de \code{sby_knn_engine}, \code{sby_knn_algorithm} e
+\code{sby_distance_metric} controla simultaneamente o provedor computacional, a
+estratégia de indexação e a geometria usada para comparar observações. Quando
+\code{sby_knn_engine = "auto"}, o pacote resolve automaticamente um engine
+compatível com os demais argumentos e com o número de workers solicitado.
 
-\tabular{llll}{
-Engine \tab Algorithms \tab Search type \tab Supported metrics\cr
-FNN \tab \code{auto}, \code{kd_tree}, \code{cover_tree}, \code{brute} \tab Exact \tab \code{euclidean}\cr
-BiocNeighbors \tab \code{Kmknn}, \code{Vptree}, \code{Exhaustive} \tab Exact \tab \code{euclidean}, \code{cosine}\cr
-BiocNeighbors \tab \code{Annoy}, \code{Hnsw} \tab Approximate \tab \code{euclidean}, \code{cosine}\cr
-RcppHNSW \tab internally managed \tab Approximate \tab \code{euclidean}, \code{cosine}, \code{ip}\cr
+Combinações válidas entre engine, tipo de busca e métrica:
+
+\tabular{lll}{
+Engine \tab Tipo de busca \tab Métricas suportadas\cr
+\code{FNN} \tab Exata \tab \code{euclidean}\cr
+\code{BiocNeighbors} \tab Exata/Aproximada \tab \code{euclidean}, \code{cosine}\cr
+\code{RcppHNSW} \tab Aproximada \tab \code{euclidean}, \code{ip}, \code{cosine}\cr
 }
 
-\code{euclidean} is the straight-line distance in continuous space,
-\eqn{d(x, y) = \sqrt{\sum (x_i - y_i)^2}}. \code{ip} is inner-product distance,
-\eqn{d(x, y) = 1 - \sum x_i y_i}, and triggers mandatory internal L2 normalization.
-\code{cosine} is angular distance,
-\eqn{d(x, y) = 1 - \frac{\sum x_i y_i}{\sqrt{\sum x_i^2} \sqrt{\sum y_i^2}}},
-and also uses internal L2 normalization for the non-Euclidean search path. FNN is
-explicitly blocked for \code{ip} and \code{cosine}; \code{ip} is accepted only by
-\code{sby_knn_engine = "RcppHNSW"}.}
+A distância euclidiana corresponde à geometria padrão em espaços contínuos e
+é definida por \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. O produto interno
+é expresso como distância por \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Atenção:
+para \code{sby_distance_metric = "ip"}, o pacote realiza normalização L2 prévia
+automática das matrizes envolvidas na busca para garantir consistência
+espacial da métrica e evitar que diferenças de norma dominem a vizinhança. A
+distância de cosseno é definida por \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}
+e privilegia a orientação angular dos vetores em vez da magnitude absoluta.
+
+Em \code{FNN}, os algoritmos \code{kd_tree}, \code{cover_tree}, \code{brute} e \code{auto} operam de
+forma exata e aceitam somente \code{euclidean}. Em \code{BiocNeighbors}, \code{Kmknn},
+\code{Vptree} e \code{Exhaustive} representam alternativas exatas, enquanto \code{Annoy} e
+\code{Hnsw} representam alternativas aproximadas; nesse engine, \code{euclidean} e
+\code{cosine} são aceitas. Em \code{RcppHNSW}, a busca é aproximada por grafo HNSW e os
+parâmetros \code{sby_hnsw_m} e \code{sby_hnsw_ef} controlam, respectivamente, a
+conectividade estrutural do grafo e a largura dinâmica da exploração.
+
+}
 \references{
-He, H., Bai, Y., Garcia, E. A., \& Li, S. (2008). ADASYN: Adaptive synthetic sampling approach for imbalanced learning. IEEE International Joint Conference on Neural Networks.
+He, H., Bai, Y., Garcia, E. A., \& Li, S. (2008). ADASYN: Adaptive synthetic
+sampling approach for imbalanced learning. In *2008 IEEE International Joint
+Conference on Neural Networks* (pp. 1322-1328). IEEE.
 
-Malkov, Y. A., \& Yashunin, D. A. (2018). Efficient and robust approximate nearest neighbor search using hierarchical navigable small world graphs. IEEE Transactions on Pattern Analysis and Machine Intelligence.
+Malkov, Y. A., \& Yashunin, D. A. (2018). Efficient and robust approximate
+nearest neighbor search using Hierarchical Navigable Small World graphs.
+*IEEE Transactions on Pattern Analysis and Machine Intelligence*, 42(4),
+824-836.
+
 }

@@ -1,68 +1,99 @@
-#' Aplicar subamostragem NearMiss em dados binarios
+#' Aplicar subamostragem NearMiss-1 em dados binários
+#'
+#' @description
+#' `sby_nearmiss()` executa subamostragem da classe majoritária pelo critério
+#' NearMiss-1, retendo observações majoritárias que apresentam menor distância
+#' média aos vizinhos da classe minoritária. A função é indicada para reduzir
+#' predominância majoritária preservando exemplos próximos à fronteira de decisão.
+#'
+#' @usage
+#' sby_nearmiss(
+#'   sby_predictor_data,
+#'   sby_target_vector,
+#'   sby_under_ratio = 0.5,
+#'   sby_k_under = 5L,
+#'   sby_seed = 42L,
+#'   sby_audit = FALSE,
+#'   sby_precomputed_scaling = NULL,
+#'   sby_input_already_scaled = FALSE,
+#'   sby_restore_types = TRUE,
+#'   sby_type_info = NULL,
+#'   sby_knn_algorithm = c(
+#'     "auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"
+#'   ),
+#'   sby_knn_engine = c(
+#'     "auto", "FNN", "BiocNeighbors", "RcppHNSW"
+#'   ),
+#'   sby_distance_metric = c(
+#'     "euclidean", "ip", "cosine"
+#'   ),
+#'   sby_knn_workers = 1L,
+#'   sby_hnsw_m = 16L,
+#'   sby_hnsw_ef = 200L
+#' )
+#'
+#' @param sby_predictor_data Data frame, tibble ou matriz contendo variáveis preditoras numéricas. Não possui valor padrão e deve ter o mesmo número de linhas de `sby_target_vector`. Esses dados definem o espaço no qual as observações majoritárias serão ranqueadas por proximidade à classe minoritária.
+#' @param sby_target_vector Vetor atômico ou fator binário associado às linhas de `sby_predictor_data`. Não possui valor padrão. Ele determina os papéis de classe minoritária e majoritária; inversões ou desalinhamentos modificam completamente quais linhas podem ser descartadas.
+#' @param sby_under_ratio Valor numérico escalar que representa a fração da classe majoritária a ser retida após a subamostragem. O padrão é `0.5`. Valores menores removem mais observações majoritárias e aumentam o balanceamento, enquanto valores maiores preservam mais cobertura da distribuição original.
+#' @param sby_k_under Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é `5L`. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.
+#' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é `42L`. A semente torna reprodutíveis desempates, amostragens complementares e a ordem final das observações preservadas.
+#' @param sby_audit Indicador lógico escalar que controla o retorno de metadados de auditoria. O padrão é `FALSE`, retornando apenas o tibble final. Quando `TRUE`, a função retorna lista com índices retidos, distribuições de classe, parâmetros resolvidos e informações de escala.
+#' @param sby_precomputed_scaling Lista opcional com parâmetros de centralização e escala previamente calculados. O padrão é `NULL`, fazendo com que a função estime a padronização a partir de `sby_predictor_data`. Fornecer essa lista permite reutilizar uma escala externa ou herdada de etapa anterior, evitando inconsistência geométrica em pipelines encadeados.
+#' @param sby_input_already_scaled Indicador lógico escalar que informa se `sby_predictor_data` já está em escala Z-score compatível com `sby_precomputed_scaling`. O padrão é `FALSE`. Quando `TRUE`, a função evita reaplicar padronização e interpreta as coordenadas de entrada como prontas para busca KNN.
+#' @param sby_restore_types Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados no retorno final. O padrão é `TRUE`. Essa escolha preserva compatibilidade com o esquema de dados de entrada; desativá-la reduz pós-processamento e mantém valores no formato numérico resultante das operações matriciais.
+#' @param sby_type_info Lista opcional com metadados dos tipos numéricos originais dos preditores. O padrão é `NULL`, fazendo a função inferir os tipos quando necessário. Fornecer esse objeto é útil em pipelines encadeados, pois garante que a restauração de tipos use exatamente o mesmo diagnóstico da etapa anterior.
+#' @param sby_knn_algorithm String escalar escolhida entre `"auto"`, `"kd_tree"`, `"cover_tree"`, `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"` e `"Hnsw"`. O padrão é `"auto"` após resolução por `match.arg()`. A escolha define o método de consulta dos vizinhos minoritários e altera desempenho, determinismo e compatibilidade com métricas.
+#' @param sby_knn_engine String escalar escolhida entre `"auto"`, `"FNN"`, `"BiocNeighbors"` e `"RcppHNSW"`. O padrão é `"auto"` após resolução. O engine controla a biblioteca usada na busca KNN e, consequentemente, o suporte a busca exata, aproximada, paralelização e métricas não euclidianas.
+#' @param sby_distance_metric String escalar escolhida entre `"euclidean"`, `"ip"` e `"cosine"`. O padrão é `"euclidean"`. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.
+#' @param sby_knn_workers Número inteiro positivo de workers usados por engines que aceitam paralelização. O padrão é `1L`. Mais workers podem reduzir latência em bases grandes, mas aumentam consumo de CPU e podem exigir engines compatíveis com execução paralela.
+#' @param sby_hnsw_m Número inteiro positivo que define a conectividade do grafo HNSW quando `RcppHNSW` é usado. O padrão é `16L`. Valores maiores podem melhorar a fidelidade da vizinhança aproximada para o ranqueamento NearMiss, com maior custo de memória.
+#' @param sby_hnsw_ef Número inteiro positivo que define a quantidade dinâmica de candidatos avaliados na busca HNSW. O padrão é `200L`. Aumentar esse valor tende a produzir vizinhos aproximados mais confiáveis e reduz risco de retenção baseada em vizinhos subótimos, mas torna a execução mais lenta.
 #'
 #' @details
-#' A interface KNN foi unificada em tres parametros publicos: `sby_knn_engine`,
-#' `sby_knn_algorithm` e `sby_distance_metric`. O argumento
-#' `sby_knn_algorithm` concentra tanto as estrategias exatas do FNN quanto os
-#' algoritmos antes associados ao BiocNeighbors. A etapa de padronizacao por
-#' Z-score continua sendo executada antes da busca; quando `sby_distance_metric`
-#' e `"ip"` ou `"cosine"`, as matrizes de referencia e consulta recebem tambem
-#' normalizacao L2 interna obrigatoria antes da submissao ao engine KNN.
+#' A função utiliza uma arquitetura de busca espacial configurável para calcular
+#' vizinhos próximos sobre preditores numéricos previamente padronizados por
+#' Z-score. A seleção de `sby_knn_engine`, `sby_knn_algorithm` e
+#' `sby_distance_metric` controla simultaneamente o provedor computacional, a
+#' estratégia de indexação e a geometria usada para comparar observações. Quando
+#' `sby_knn_engine = "auto"`, o pacote resolve automaticamente um engine
+#' compatível com os demais argumentos e com o número de workers solicitado.
 #'
-#' Compatibilidade entre engines, algoritmos e metricas:
+#' Combinações válidas entre engine, tipo de busca e métrica:
 #'
-#' | Engine | Algoritmos em `sby_knn_algorithm` | Tipo de busca | Metricas suportadas |
-#' |---|---|---|---|
-#' | FNN | `auto`, `kd_tree`, `cover_tree`, `brute` | Busca exata | `euclidean` |
-#' | BiocNeighbors | `Kmknn`, `Vptree`, `Exhaustive` | Busca exata | `euclidean`, `cosine` |
-#' | BiocNeighbors | `Annoy`, `Hnsw` | Busca aproximada | `euclidean`, `cosine` |
-#' | RcppHNSW | gerido internamente | Busca aproximada | `euclidean`, `cosine`, `ip` |
+#' | Engine | Tipo de busca | Métricas suportadas |
+#' |---|---|---|
+#' | `FNN` | Exata | `euclidean` |
+#' | `BiocNeighbors` | Exata/Aproximada | `euclidean`, `cosine` |
+#' | `RcppHNSW` | Aproximada | `euclidean`, `ip`, `cosine` |
 #'
-#' Metricas disponiveis:
+#' A distância euclidiana corresponde à geometria padrão em espaços contínuos e
+#' é definida por \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. O produto interno
+#' é expresso como distância por \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Atenção:
+#' para `sby_distance_metric = "ip"`, o pacote realiza normalização L2 prévia
+#' automática das matrizes envolvidas na busca para garantir consistência
+#' espacial da métrica e evitar que diferenças de norma dominem a vizinhança. A
+#' distância de cosseno é definida por \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}
+#' e privilegia a orientação angular dos vetores em vez da magnitude absoluta.
 #'
-#' * `euclidean`: distancia em linha reta no espaco continuo e padrao universal
-#'   para KNN, definida por \eqn{d(x, y) = \sqrt{\sum (x_i - y_i)^2}}.
-#' * `ip`: produto interno convertido em distancia por
-#'   \eqn{d(x, y) = 1 - \sum x_i y_i}. E a alternativa computacionalmente mais
-#'   rapida em engines vetorizados, mas aciona obrigatoriamente normalizacao L2
-#'   automatica das matrizes apos o Z-score e antes da busca.
-#' * `cosine`: similaridade angular espelhada como distancia por
-#'   \eqn{d(x, y) = 1 - \frac{\sum x_i y_i}{\sqrt{\sum x_i^2} \sqrt{\sum y_i^2}}}.
-#'   Tambem aciona normalizacao L2 interna em engines aproximados para favorecer
-#'   desempenho vetorial e coerencia numerica.
-#'
-#' O engine FNN e explicitamente bloqueado para `ip` e `cosine`, pois sua
-#' implementacao nativa no pacote suporta somente distancia euclidiana. O produto
-#' interno e aceito exclusivamente por `sby_knn_engine = "RcppHNSW"`.
+#' Em `FNN`, os algoritmos `kd_tree`, `cover_tree`, `brute` e `auto` operam de
+#' forma exata e aceitam somente `euclidean`. Em `BiocNeighbors`, `Kmknn`,
+#' `Vptree` e `Exhaustive` representam alternativas exatas, enquanto `Annoy` e
+#' `Hnsw` representam alternativas aproximadas; nesse engine, `euclidean` e
+#' `cosine` são aceitas. Em `RcppHNSW`, a busca é aproximada por grafo HNSW e os
+#' parâmetros `sby_hnsw_m` e `sby_hnsw_ef` controlam, respectivamente, a
+#' conectividade estrutural do grafo e a largura dinâmica da exploração.
 #'
 #' @references
 #' He, H., Bai, Y., Garcia, E. A., & Li, S. (2008). ADASYN: Adaptive synthetic
-#' sampling approach for imbalanced learning. IEEE International Joint Conference
-#' on Neural Networks.
+#' sampling approach for imbalanced learning. In *2008 IEEE International Joint
+#' Conference on Neural Networks* (pp. 1322-1328). IEEE.
 #'
 #' Malkov, Y. A., & Yashunin, D. A. (2018). Efficient and robust approximate
-#' nearest neighbor search using hierarchical navigable small world graphs. IEEE
-#' Transactions on Pattern Analysis and Machine Intelligence.
-#' @title Aplicar subamostragem NearMiss em dados binarios
-#' @name sby_nearmiss
-#' @param sby_predictor_data Data frame ou matriz com variaveis preditoras numericas
-#' @param sby_target_vector Vetor de classe binaria associado as linhas de entrada
-#' @param sby_under_ratio Fracao da classe majoritaria a ser retida apos a subamostragem
-#' @param sby_k_under Numero de vizinhos minoritarios usados no criterio NearMiss
-#' @param sby_seed Semente usada para controlar componentes estocasticos do processamento
-#' @param sby_audit Indicador logico para retornar metadados completos de auditoria
-#' @param sby_precomputed_scaling Lista opcional com parametros de centralizacao e escala previamente calculados
-#' @param sby_input_already_scaled Indicador logico de que os preditores ja estao padronizados
-#' @param sby_restore_types Indicador logico para restaurar tipos numericos originais ao final
-#' @param sby_type_info Informacao opcional sobre os tipos numericos originais dos preditores
-#' @param sby_knn_algorithm Algoritmo KNN unificado usado pelo engine selecionado
-#' @param sby_knn_engine Engine usado para calcular vizinhos proximos
-#' @param sby_distance_metric Metrica de distancia para a busca KNN
-#' @param sby_knn_workers Numero de workers usado por engines paralelizaveis
-#' @param sby_hnsw_m Parametro de conectividade do indice HNSW no engine RcppHNSW
-#' @param sby_hnsw_ef Tamanho da lista dinamica de construcao e busca HNSW no engine RcppHNSW
+#' nearest neighbor search using Hierarchical Navigable Small World graphs.
+#' *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 42(4),
+#' 824-836.
 #'
-#' @return Tibble balanceado quando `sby_audit = FALSE`; lista de auditoria quando `sby_audit = TRUE`
+#' @return Tibble balanceado quando `sby_audit = FALSE`; lista de auditoria com dados balanceados, índices, diagnósticos e escala quando `sby_audit = TRUE`.
 #' @export
 sby_nearmiss <- function(
   sby_predictor_data,
