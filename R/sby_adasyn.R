@@ -9,11 +9,11 @@
 #'
 #' @usage
 #' sby_adasyn(
-#'   sby_predictor_data,
-#'   sby_target_vector,
+#'   sby_formula,
+#'   sby_data,
 #'   sby_over_ratio = 0.2,
-#'   sby_k_over = 5L,
-#'   sby_seed = 42L,
+#'   sby_knn_over_k = 5L,
+#'   sby_seed = sample.int(10L^5L, 1L),
 #'   sby_audit = FALSE,
 #'   sby_return_scaled = FALSE,
 #'   sby_restore_types = TRUE,
@@ -23,62 +23,76 @@
 #'   sby_knn_engine = c(
 #'     "auto", "FNN", "BiocNeighbors", "RcppHNSW"
 #'   ),
-#'   sby_distance_metric = c(
+#'   sby_knn_distance_metric = c(
 #'     "euclidean", "ip", "cosine"
 #'   ),
 #'   sby_knn_workers = 1L,
-#'   sby_hnsw_m = 16L,
-#'   sby_hnsw_ef = 200L
+#'   sby_knn_hnsw_m = 16L,
+#'   sby_knn_hnsw_ef = 200L
 #' )
 #'
-#' @param sby_predictor_data Data frame, tibble ou matriz contendo exclusivamente variáveis preditoras numéricas alinhadas linha a linha ao vetor alvo. Não possui valor padrão, pois representa a matriz de características sobre a qual a vizinhança ADASYN será calculada. A escala e a distribuição dessas colunas influenciam diretamente a geração sintética, embora o pacote aplique padronização Z-score antes da busca.
-#' @param sby_target_vector Vetor atômico ou fator com exatamente duas classes e comprimento igual ao número de linhas de `sby_predictor_data`. Não possui valor padrão. Esse vetor define quais observações pertencem às classes minoritária e majoritária; qualquer desalinhamento altera a distribuição aprendida e invalida a sobreamostragem.
+#' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
+#' @param sby_data Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em `sby_formula`. Não possui valor padrão. A escala e a distribuição das colunas preditoras influenciam diretamente a geração sintética, embora o pacote aplique padronização Z-score antes da busca.
 #' @param sby_over_ratio Valor numérico escalar que controla a expansão relativa da classe minoritária. O padrão é `0.2`, indicando uma geração sintética moderada em relação ao déficit observado entre as classes. Valores maiores aproximam mais a contagem minoritária da majoritária, mas aumentam o risco de criar amostras sintéticas em regiões ruidosas.
-#' @param sby_k_over Número inteiro positivo de vizinhos usados para estimar a dificuldade local de cada observação minoritária no critério ADASYN. O padrão é `5L`. Valores maiores tornam a estimativa de dificuldade mais estável e global; valores menores enfatizam estruturas locais e podem reagir fortemente a outliers.
-#' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é `42L`. Garantir uma semente fixa é fundamental para reproduzir exatamente os vizinhos empatados, as escolhas de interpolação e as matrizes sintéticas geradas.
+#' @param sby_knn_over_k Número inteiro positivo de vizinhos usados para estimar a dificuldade local de cada observação minoritária no critério ADASYN. O padrão é `5L`. Valores maiores tornam a estimativa de dificuldade mais estável e global; valores menores enfatizam estruturas locais e podem reagir fortemente a outliers.
+#' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é `sample.int(10L^5L, 1L)`, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para reproduzir exatamente os vizinhos empatados, as escolhas de interpolação e as matrizes sintéticas geradas.
 #' @param sby_audit Indicador lógico escalar que controla o formato do retorno. O padrão é `FALSE`, retornando apenas o conjunto balanceado final. Quando `TRUE`, a função retorna uma lista com diagnósticos, parâmetros resolvidos e artefatos intermediários úteis para validação metodológica e depuração.
 #' @param sby_return_scaled Indicador lógico escalar que define se a matriz balanceada ainda padronizada deve ser incluída no retorno de auditoria. O padrão é `FALSE`, evitando armazenamento adicional. Quando `TRUE`, permite encadear a saída com rotinas que reutilizam a mesma escala, como o pipeline combinado `sby_adanear()`.
 #' @param sby_restore_types Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados no tibble final. O padrão é `TRUE`. Essa restauração melhora compatibilidade com dados que entraram como inteiros ou classes numéricas específicas; quando `FALSE`, a saída tende a permanecer em representação numérica de ponto flutuante.
 #' @param sby_knn_algorithm String escalar escolhida entre `"auto"`, `"kd_tree"`, `"cover_tree"`, `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"` e `"Hnsw"`. O padrão é resolvido como `"auto"`. A seleção determina como os vizinhos minoritários e mistos serão consultados, afetando tempo de execução, exatidão e disponibilidade de métricas.
 #' @param sby_knn_engine String escalar escolhida entre `"auto"`, `"FNN"`, `"BiocNeighbors"` e `"RcppHNSW"`. O padrão é resolvido como `"auto"`. Esse engine define a implementação concreta da busca espacial; a escolha pode favorecer exatidão determinística, integração Bioconductor ou busca aproximada de alta escala.
-#' @param sby_distance_metric String escalar escolhida entre `"euclidean"`, `"ip"` e `"cosine"`. O padrão é `"euclidean"`. A métrica altera a noção de proximidade usada para estimar dificuldade local e, portanto, pode mudar quais regiões recebem mais observações sintéticas.
+#' @param sby_knn_distance_metric String escalar escolhida entre `"euclidean"`, `"ip"` e `"cosine"`. O padrão é `"euclidean"`. A métrica altera a noção de proximidade usada para estimar dificuldade local e, portanto, pode mudar quais regiões recebem mais observações sintéticas.
 #' @param sby_knn_workers Número inteiro positivo de workers disponibilizados para engines paralelizáveis. O padrão é `1L`. Aumentar o valor pode acelerar consultas KNN em matrizes grandes, mas eleva uso de CPU e pode modificar a escolha automática de engine.
-#' @param sby_hnsw_m Número inteiro positivo que controla a conectividade estrutural do grafo HNSW quando o engine efetivo é `"RcppHNSW"`. O padrão é `16L`. Valores maiores geralmente melhoram a recuperação de vizinhos aproximados e aumentam memória; valores menores reduzem custo com possível queda de qualidade.
-#' @param sby_hnsw_ef Número inteiro positivo que controla a largura dinâmica da busca HNSW. O padrão é `200L`. Elevar esse valor tende a aproximar o resultado da busca exata e torna a sobreamostragem mais estável, ao custo de consultas mais lentas.
+#' @param sby_knn_hnsw_m Número inteiro positivo que controla a conectividade estrutural do grafo HNSW quando o engine efetivo é `"RcppHNSW"`. O padrão é `16L`. Valores maiores geralmente melhoram a recuperação de vizinhos aproximados e aumentam memória; valores menores reduzem custo com possível queda de qualidade.
+#' @param sby_knn_hnsw_ef Número inteiro positivo que controla a largura dinâmica da busca HNSW. O padrão é `200L`. Elevar esse valor tende a aproximar o resultado da busca exata e torna a sobreamostragem mais estável, ao custo de consultas mais lentas.
 #'
 #' @details
 #' A função utiliza uma arquitetura de busca espacial configurável para calcular
 #' vizinhos próximos sobre preditores numéricos previamente padronizados por
 #' Z-score. A seleção de `sby_knn_engine`, `sby_knn_algorithm` e
-#' `sby_distance_metric` controla simultaneamente o provedor computacional, a
+#' `sby_knn_distance_metric` controla simultaneamente o provedor computacional, a
 #' estratégia de indexação e a geometria usada para comparar observações. Quando
 #' `sby_knn_engine = "auto"`, o pacote resolve automaticamente um engine
 #' compatível com os demais argumentos e com o número de workers solicitado.
 #'
-#' Combinações válidas entre engine, tipo de busca e métrica:
+#' ## Opções de `sby_knn_distance_metric`
 #'
-#' | Engine | Tipo de busca | Métricas suportadas |
-#' |---|---|---|
-#' | `FNN` | Exata | `euclidean` |
-#' | `BiocNeighbors` | Exata/Aproximada | `euclidean`, `cosine` |
-#' | `RcppHNSW` | Aproximada | `euclidean`, `ip`, `cosine` |
+#' A métrica escolhida deve ser compatível com `sby_knn_engine` e
+#' `sby_knn_algorithm`. As opções são:
 #'
-#' A distância euclidiana corresponde à geometria padrão em espaços contínuos e
-#' é definida por \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. O produto interno
-#' é expresso como distância por \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Atenção:
-#' para `sby_distance_metric = "ip"`, o pacote realiza normalização L2 prévia
-#' automática das matrizes envolvidas na busca para garantir consistência
-#' espacial da métrica e evitar que diferenças de norma dominem a vizinhança. A
-#' distância de cosseno é definida por \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}
-#' e privilegia a orientação angular dos vetores em vez da magnitude absoluta.
+#' ### `euclidean`
 #'
-#' Em `FNN`, os algoritmos `kd_tree`, `cover_tree`, `brute` e `auto` operam de
-#' forma exata e aceitam somente `euclidean`. Em `BiocNeighbors`, `Kmknn`,
-#' `Vptree` e `Exhaustive` representam alternativas exatas, enquanto `Annoy` e
-#' `Hnsw` representam alternativas aproximadas; nesse engine, `euclidean` e
-#' `cosine` são aceitas. Em `RcppHNSW`, a busca é aproximada por grafo HNSW e os
-#' parâmetros `sby_hnsw_m` e `sby_hnsw_ef` controlam, respectivamente, a
-#' conectividade estrutural do grafo e a largura dinâmica da exploração.
+#' Distância euclidiana, definida por
+#' \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. É a opção padrão e a mais ampla
+#' em termos de compatibilidade. Com `sby_knn_engine = "FNN"`, opera somente de
+#' forma exata com `sby_knn_algorithm` em `"auto"`, `"kd_tree"`, `"cover_tree"`
+#' ou `"brute"`. Com `sby_knn_engine = "BiocNeighbors"`, pode ser exata quando
+#' `sby_knn_algorithm` é `"Kmknn"`, `"Vptree"` ou `"Exhaustive"`, ou aproximada
+#' quando o algoritmo é `"Annoy"` ou `"Hnsw"`. Com
+#' `sby_knn_engine = "RcppHNSW"`, a busca é sempre aproximada por grafo HNSW e os
+#' parâmetros `sby_knn_hnsw_m` e `sby_knn_hnsw_ef` controlam conectividade e
+#' exploração.
+#'
+#' ### `cosine`
+#'
+#' Distância de cosseno, definida por
+#' \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}.
+#' Privilegia a orientação angular dos vetores em vez da magnitude absoluta. Não
+#' é aceita por `sby_knn_engine = "FNN"`. Com
+#' `sby_knn_engine = "BiocNeighbors"`, pode ser exata com `"Kmknn"`, `"Vptree"`
+#' ou `"Exhaustive"`, ou aproximada com `"Annoy"` ou `"Hnsw"`. Com
+#' `sby_knn_engine = "RcppHNSW"`, a busca é aproximada por HNSW. Para manter a
+#' consistência angular, o pacote aplica normalização L2 antes da consulta KNN.
+#'
+#' ### `ip`
+#'
+#' Produto interno expresso como distância por
+#' \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Essa opção é suportada apenas por
+#' `sby_knn_engine = "RcppHNSW"`; portanto, a busca é sempre aproximada e depende
+#' dos parâmetros HNSW `sby_knn_hnsw_m` e `sby_knn_hnsw_ef`. Ela não é compatível
+#' com `sby_knn_engine = "FNN"` nem com `sby_knn_engine = "BiocNeighbors"`,
+#' independentemente de `sby_knn_algorithm`. O pacote aplica normalização L2
+#' prévia para evitar que diferenças de norma dominem a vizinhança.
 #'
 #' @references
 #' He, H., Bai, Y., Garcia, E. A., & Li, S. (2008). ADASYN: Adaptive synthetic
@@ -93,24 +107,32 @@
 #' @return Tibble balanceado quando `sby_audit = FALSE`; lista de auditoria com dados balanceados, diagnósticos e artefatos intermediários quando `sby_audit = TRUE`.
 #' @export
 sby_adasyn <- function(
-  sby_predictor_data,
-  sby_target_vector,
+  sby_formula,
+  sby_data,
   sby_over_ratio = 0.2,
-  sby_k_over = 5L,
-  sby_seed = 42L,
+  sby_knn_over_k = 5L,
+  sby_seed = sample.int(10L^5L, 1L),
   sby_audit = FALSE,
   sby_return_scaled = FALSE,
   sby_restore_types = TRUE,
   sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
-  sby_distance_metric = c("euclidean", "ip", "cosine"),
+  sby_knn_distance_metric = c("euclidean", "ip", "cosine"),
   sby_knn_workers = 1L,
-  sby_hnsw_m = 16L,
-  sby_hnsw_ef = 200L
+  sby_knn_hnsw_m = 16L,
+  sby_knn_hnsw_ef = 200L
 ){
   
   # Verifica se ha solicitacao de interrupcao pelo usuario
   sby_adanear_check_user_interrupt()
+
+  # Resolve formula e dados em matriz de preditores e vetor alvo
+  sby_formula_data <- sby_extract_formula_data(
+    sby_formula = sby_formula,
+    sby_data    = sby_data
+  )
+  sby_predictor_data <- sby_formula_data$sby_predictor_data
+  sby_target_vector  <- sby_formula_data$sby_target_vector
 
   # Valida parametros logicos escalares de controle operacional
   sby_audit <- sby_validate_logical_scalar(
@@ -133,8 +155,8 @@ sby_adasyn <- function(
   sby_knn_engine <- match.arg(
     arg = sby_knn_engine
   )
-  sby_distance_metric <- match.arg(
-    arg = sby_distance_metric
+  sby_knn_distance_metric <- match.arg(
+    arg = sby_knn_distance_metric
   )
 
   # Valida recursos paralelos e parametros HNSW
@@ -142,13 +164,13 @@ sby_adasyn <- function(
     sby_knn_workers = sby_knn_workers
   )
   sby_hnsw_params <- sby_validate_hnsw_params(
-    sby_hnsw_m  = sby_hnsw_m,
-    sby_hnsw_ef = sby_hnsw_ef
+    sby_knn_hnsw_m  = sby_knn_hnsw_m,
+    sby_knn_hnsw_ef = sby_knn_hnsw_ef
   )
 
   # Extrai parametros HNSW normalizados para uso posterior
-  sby_hnsw_m  <- sby_hnsw_params$sby_hnsw_m
-  sby_hnsw_ef <- sby_hnsw_params$sby_hnsw_ef
+  sby_knn_hnsw_m  <- sby_hnsw_params$sby_knn_hnsw_m
+  sby_knn_hnsw_ef <- sby_hnsw_params$sby_knn_hnsw_ef
 
   # Valida consistencia basica entre preditores, alvo e semente
   sby_validate_sampling_inputs(
@@ -158,11 +180,11 @@ sby_adasyn <- function(
   )
 
   # Verifica se o numero de vizinhos de sobreamostragem e valido
-  if(!(is.numeric(sby_k_over) && length(sby_k_over) == 1L && !is.na(sby_k_over) && sby_k_over >= 1L)){
+  if(!(is.numeric(sby_knn_over_k) && length(sby_knn_over_k) == 1L && !is.na(sby_knn_over_k) && sby_knn_over_k >= 1L)){
 
     # Aborta quando o parametro ADASYN nao representa inteiro positivo
     sby_adanear_abort(
-      sby_message = "'sby_k_over' deve ser inteiro positivo"
+      sby_message = "'sby_knn_over_k' deve ser inteiro positivo"
     )
   }
 
@@ -219,13 +241,13 @@ sby_adasyn <- function(
     sby_x_scaled                 = sby_x_scaled,
     sby_target_factor            = sby_target_factor,
     sby_synthetic_count          = sby_synthetic_count,
-    sby_k_over                   = sby_k_over,
+    sby_knn_over_k                   = sby_knn_over_k,
     sby_knn_algorithm            = sby_knn_algorithm,
     sby_knn_engine              = sby_knn_engine,
-    sby_distance_metric          = sby_distance_metric,
+    sby_knn_distance_metric          = sby_knn_distance_metric,
     sby_knn_workers              = sby_knn_workers,
-    sby_hnsw_m                   = sby_hnsw_m,
-    sby_hnsw_ef                  = sby_hnsw_ef
+    sby_knn_hnsw_m                   = sby_knn_hnsw_m,
+    sby_knn_hnsw_ef                  = sby_knn_hnsw_ef
   )
 
   # Verifica se ha solicitacao de interrupcao apos a geracao sintetica
@@ -273,7 +295,7 @@ sby_adasyn <- function(
       x = sby_knn_engine,
       y = "RcppHNSW"
     ),
-    yes = sby_hnsw_m,
+    yes = sby_knn_hnsw_m,
     no  = NA_integer_
   )
 
@@ -283,7 +305,7 @@ sby_adasyn <- function(
       x = sby_knn_engine,
       y = "RcppHNSW"
     ),
-    yes = sby_hnsw_ef,
+    yes = sby_knn_hnsw_ef,
     no  = NA_integer_
   )
 
@@ -293,10 +315,10 @@ sby_adasyn <- function(
     sby_output_rows               = nrow(sby_balanced_data),
     sby_generated_rows            = nrow(sby_balanced_data) - nrow(sby_x_matrix),
     sby_knn_engine               = sby_knn_engine,
-    sby_distance_metric           = sby_distance_metric,
+    sby_knn_distance_metric           = sby_knn_distance_metric,
     sby_knn_workers               = sby_knn_workers,
-    sby_hnsw_m                    = sby_diagnostic_hnsw_m,
-    sby_hnsw_ef                   = sby_diagnostic_hnsw_ef,
+    sby_knn_hnsw_m                    = sby_diagnostic_hnsw_m,
+    sby_knn_hnsw_ef                   = sby_diagnostic_hnsw_ef,
     sby_input_class_distribution  = table(sby_target_factor),
     sby_output_class_distribution = table(as.factor(sby_adasyn_result$y))
   )

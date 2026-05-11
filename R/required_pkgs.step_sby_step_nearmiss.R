@@ -1,0 +1,13 @@
+#' Pacotes requeridos pela etapa NearMiss
+#'
+#' @param x Objeto de etapa
+#' @param ... Argumentos adicionais preservados para compatibilidade S3
+#'
+#' @return Vetor de nomes dos pacotes requeridos
+#' @export
+required_pkgs.step_sby_step_nearmiss <- function(x, ...){
+  return(c("instenginer", "recipes"))
+}
+####
+## Fim
+#

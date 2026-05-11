@@ -10,8 +10,8 @@
 #' @param sby_knn_algorithm Algoritmo KNN configurado
 #' @param sby_knn_engine Engine KNN configurado
 #' @param sby_knn_workers Numero de workers KNN configurado
-#' @param sby_hnsw_m Conectividade HNSW configurada
-#' @param sby_hnsw_ef Lista dinamica HNSW configurada
+#' @param sby_knn_hnsw_m Conectividade HNSW configurada
+#' @param sby_knn_hnsw_ef Lista dinamica HNSW configurada
 #' @param sby_knn_query_chunk_size Tamanho de bloco para consultas KNN
 #'
 #' @return Lista com matrizes `nn.index` e `nn.dist`
@@ -22,10 +22,10 @@ sby_get_knnx <- function(
   sby_k,
   sby_knn_algorithm,
   sby_knn_engine,
-  sby_distance_metric,
+  sby_knn_distance_metric,
   sby_knn_workers,
-  sby_hnsw_m,
-  sby_hnsw_ef,
+  sby_knn_hnsw_m,
+  sby_knn_hnsw_ef,
   sby_knn_query_chunk_size = getOption("instenginer.sby_knn_query_chunk_size", 1000L)
 ){
   
@@ -39,7 +39,7 @@ sby_get_knnx <- function(
 
   # Aplica normalizacao L2 obrigatoria para metricas angulares ou produto interno
   if(!identical(
-    x = sby_distance_metric,
+    x = sby_knn_distance_metric,
     y = "euclidean"
   )){
 
@@ -60,13 +60,13 @@ sby_get_knnx <- function(
 
     # Bloqueia metricas nao euclidianas porque FNN implementa apenas distancia euclidiana neste pacote
     if(!identical(
-      x = sby_distance_metric,
+      x = sby_knn_distance_metric,
       y = "euclidean"
     )){
 
       # Aborta combinacao incompatvel para evitar regressao silenciosa de metrica
       sby_adanear_abort(
-        sby_message = "'sby_knn_engine = FNN' suporta apenas 'sby_distance_metric = euclidean'"
+        sby_message = "'sby_knn_engine = FNN' suporta apenas 'sby_knn_distance_metric = euclidean'"
       )
     }
 
@@ -135,7 +135,7 @@ sby_get_knnx <- function(
     # Define parametro efetivo de busca HNSW limitado pelo tamanho dos dados
     sby_effective_ef <- min(
       max(
-        as.integer(sby_hnsw_ef),
+        as.integer(sby_knn_hnsw_ef),
         as.integer(sby_k)
       ),
       nrow(sby_data)
@@ -144,8 +144,8 @@ sby_get_knnx <- function(
     # Constroi indice HNSW para a matriz de referencia
     sby_hnsw_index <- RcppHNSW::hnsw_build(
       X = sby_data,
-      distance = sby_distance_metric,
-      M = as.integer(sby_hnsw_m),
+      distance = sby_knn_distance_metric,
+      M = as.integer(sby_knn_hnsw_m),
       ef = sby_effective_ef,
       verbose = FALSE,
       progress = "bar",
@@ -216,7 +216,7 @@ sby_get_knnx <- function(
   sby_neighbor_param <- sby_create_bioc_neighbor_param(
     sby_knn_algorithm          = sby_knn_algorithm,
     sby_predictor_column_count = NCOL(sby_data),
-    sby_distance_metric        = sby_distance_metric
+    sby_knn_distance_metric        = sby_knn_distance_metric
   )
   sby_parallel_param <- sby_create_knn_bioc_parallel_param(
     sby_knn_workers = sby_knn_workers
