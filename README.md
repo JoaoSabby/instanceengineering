@@ -60,7 +60,7 @@ options(instenginer.sby_hnsw_query_chunk_size = 100L)
 
 ```r
 # Pipeline híbrido: primeiro gera amostras sintéticas com ADASYN e depois
-# reduz a classe majoritária com NearMiss-1.
+# reduz a classe majoritária com NearMiss-1
 sby_adanear(
   sby_formula,
   sby_data,
@@ -72,7 +72,7 @@ sby_adanear(
   sby_audit = FALSE
 )
 
-# Somente sobreamostragem ADASYN da classe minoritária.
+# Somente sobreamostragem ADASYN da classe minoritária
 sby_adasyn(
   sby_formula,
   sby_data,
@@ -82,7 +82,7 @@ sby_adasyn(
   sby_audit = FALSE
 )
 
-# Somente subamostragem NearMiss-1 da classe majoritária.
+# Somente subamostragem NearMiss-1 da classe majoritária
 sby_nearmiss(
   sby_formula,
   sby_data,
@@ -132,29 +132,28 @@ sby_step_adanear(
 ```
 
 Por padrão, as etapas usam `skip = TRUE`, pois alteram o número de linhas do
-conjunto processado e normalmente devem ser aplicadas apenas no treinamento.
+conjunto processado e normalmente devem ser aplicadas apenas no treinamento
 
 ## Exemplo rápido com `sby_adanear()`
 
 ```r
 library(instenginer)
 
-# A semente aqui controla apenas a criação do exemplo reproduzível.
+# A semente aqui controla apenas a criação do exemplo reproduzível
 set.seed(42)
 
 # Cria dois preditores numéricos. As rotinas de sampling esperam preditores
-# numéricos; variáveis categóricas devem ser tratadas antes do balanceamento.
+# numéricos; variáveis categóricas devem ser tratadas antes do balanceamento
 sby_x <- tibble::tibble(
   sby_a = rnorm(40),
   sby_b = rnorm(40)
 )
 
 # Cria um alvo binário desbalanceado: 10 observações minoritárias e 30
-# majoritárias. A coluna do alvo pode ter qualquer nome na entrada.
+# majoritárias. A coluna do alvo pode ter qualquer nome na entrada
 sby_y <- factor(c(rep("minority", 10), rep("majority", 30)))
 
-# Junta preditores e alvo em um único data frame, pois a API pública usa
-# fórmula + dados.
+# Junta preditores e alvo em um único data frame, pois a API pública usa fórmula + dados
 sby_data <- tibble::add_column(sby_x, sby_y = sby_y)
 
 # Aplica o pipeline híbrido:
@@ -179,7 +178,7 @@ sby_balanced
 
 ```r
 # Com sby_audit = TRUE, a função retorna uma lista com dados finais,
-# resultados intermediários e diagnósticos de contagem/configuração.
+# resultados intermediários e diagnósticos de contagem/configuração
 sby_audit <- sby_adanear(
   sby_formula = sby_y ~ .,
   sby_data = sby_data,
@@ -190,7 +189,7 @@ sby_audit <- sby_adanear(
 )
 
 # Diagnósticos incluem contagens de linhas, distribuição de classes e
-# parâmetros KNN resolvidos.
+# parâmetros KNN resolvidos
 sby_audit$sby_diagnostics
 
 # Dados balanceados finais.
@@ -201,7 +200,7 @@ sby_audit$sby_balanced_data
 
 ```r
 # Apenas ADASYN: aumenta adaptativamente a classe minoritária e mantém todos os
-# exemplos originais.
+# exemplos originais
 sby_only_over <- sby_adasyn(
   sby_formula = sby_y ~ .,
   sby_data = sby_data,
@@ -210,7 +209,7 @@ sby_only_over <- sby_adasyn(
 )
 
 # Apenas NearMiss-1: reduz a classe majoritária priorizando exemplos próximos à
-# classe minoritária.
+# classe minoritária
 sby_only_under <- sby_nearmiss(
   sby_formula = sby_y ~ .,
   sby_data = sby_data,
@@ -227,7 +226,7 @@ library(recipes)
 # Define uma recipe simples. O desfecho é sby_y e os preditores são sby_a/sby_b.
 sby_rec <- recipe(sby_y ~ ., data = sby_data)
 
-# Seleciona explicitamente o desfecho para a etapa supervisionada.
+# Seleciona explicitamente o desfecho para a etapa supervisionada
 sby_rec <- sby_step_adanear(
   recipe = sby_rec,
   all_outcomes(),
@@ -271,7 +270,7 @@ BiocManager::install(c("BiocNeighbors", "BiocParallel"))
 ## Ambiente de desenvolvimento
 
 O repositório inclui um `Dockerfile` com R, toolchain de compilação e as
-dependências de sistema necessárias para desenvolvimento e validação do pacote.
+dependências de sistema necessárias para desenvolvimento e validação do pacote
 
 ```sh
 docker build -t instenginer-r .
