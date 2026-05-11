@@ -9,11 +9,11 @@ predominância majoritária preservando exemplos próximos à fronteira de decis
 }
 \usage{
 sby_nearmiss(
-  sby_predictor_data,
-  sby_target_vector,
+  sby_formula,
+  sby_data,
   sby_under_ratio = 0.5,
-  sby_k_under = 5L,
-  sby_seed = 42L,
+  sby_knn_under_k = 5L,
+  sby_seed = sample.int(10L^5L, 1L),
   sby_audit = FALSE,
   sby_precomputed_scaling = NULL,
   sby_input_already_scaled = FALSE,
@@ -25,39 +25,39 @@ sby_nearmiss(
   sby_knn_engine = c(
     "auto", "FNN", "BiocNeighbors", "RcppHNSW"
   ),
-  sby_distance_metric = c(
+  sby_knn_distance_metric = c(
     "euclidean", "ip", "cosine"
   ),
   sby_knn_workers = 1L,
-  sby_hnsw_m = 16L,
-  sby_hnsw_ef = 200L
+  sby_knn_hnsw_m = 16L,
+  sby_knn_hnsw_ef = 200L
 )
 
 }
 \arguments{
-\item{sby_predictor_data}{Data frame, tibble ou matriz contendo variáveis preditoras numéricas. Não possui valor padrão e deve ter o mesmo número de linhas de \code{sby_target_vector}. Esses dados definem o espaço no qual as observações majoritárias serão ranqueadas por proximidade à classe minoritária.}
-\item{sby_target_vector}{Vetor atômico ou fator binário associado às linhas de \code{sby_predictor_data}. Não possui valor padrão. Ele determina os papéis de classe minoritária e majoritária; inversões ou desalinhamentos modificam completamente quais linhas podem ser descartadas.}
+\item{sby_formula}{Fórmula no formato \code{alvo ~ preditores} usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em \code{sby_data}. Use \code{alvo ~ .} para selecionar todos os demais campos como preditores.}
+\item{sby_data}{Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em \code{sby_formula}.}
 \item{sby_under_ratio}{Valor numérico escalar que representa a fração da classe majoritária a ser retida após a subamostragem. O padrão é \code{0.5}. Valores menores removem mais observações majoritárias e aumentam o balanceamento, enquanto valores maiores preservam mais cobertura da distribuição original.}
-\item{sby_k_under}{Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é \code{5L}. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.}
-\item{sby_seed}{Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é \code{42L}. A semente torna reprodutíveis desempates, amostragens complementares e a ordem final das observações preservadas.}
+\item{sby_knn_under_k}{Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é \code{5L}. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.}
+\item{sby_seed}{Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é \code{sample.int(10L^5L, 1L)}, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para tornar reprodutíveis desempates, amostragens complementares e a ordem final das observações preservadas.}
 \item{sby_audit}{Indicador lógico escalar que controla o retorno de metadados de auditoria. O padrão é \code{FALSE}, retornando apenas o tibble final. Quando \code{TRUE}, a função retorna lista com índices retidos, distribuições de classe, parâmetros resolvidos e informações de escala.}
-\item{sby_precomputed_scaling}{Lista opcional com parâmetros de centralização e escala previamente calculados. O padrão é \code{NULL}, fazendo com que a função estime a padronização a partir de \code{sby_predictor_data}. Fornecer essa lista permite reutilizar uma escala externa ou herdada de etapa anterior, evitando inconsistência geométrica em pipelines encadeados.}
-\item{sby_input_already_scaled}{Indicador lógico escalar que informa se \code{sby_predictor_data} já está em escala Z-score compatível com \code{sby_precomputed_scaling}. O padrão é \code{FALSE}. Quando \code{TRUE}, a função evita reaplicar padronização e interpreta as coordenadas de entrada como prontas para busca KNN.}
+\item{sby_precomputed_scaling}{Lista opcional com parâmetros de centralização e escala previamente calculados. O padrão é \code{NULL}, fazendo com que a função estime a padronização a partir de \code{sby_data}. Fornecer essa lista permite reutilizar uma escala externa ou herdada de etapa anterior, evitando inconsistência geométrica em pipelines encadeados.}
+\item{sby_input_already_scaled}{Indicador lógico escalar que informa se \code{sby_data} já está em escala Z-score compatível com \code{sby_precomputed_scaling}. O padrão é \code{FALSE}. Quando \code{TRUE}, a função evita reaplicar padronização e interpreta as coordenadas de entrada como prontas para busca KNN.}
 \item{sby_restore_types}{Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados no retorno final. O padrão é \code{TRUE}. Essa escolha preserva compatibilidade com o esquema de dados de entrada; desativá-la reduz pós-processamento e mantém valores no formato numérico resultante das operações matriciais.}
 \item{sby_type_info}{Lista opcional com metadados dos tipos numéricos originais dos preditores. O padrão é \code{NULL}, fazendo a função inferir os tipos quando necessário. Fornecer esse objeto é útil em pipelines encadeados, pois garante que a restauração de tipos use exatamente o mesmo diagnóstico da etapa anterior.}
 \item{sby_knn_algorithm}{String escalar escolhida entre \code{"auto"}, \code{"kd_tree"}, \code{"cover_tree"}, \code{"brute"}, \code{"Kmknn"}, \code{"Vptree"}, \code{"Exhaustive"}, \code{"Annoy"} e \code{"Hnsw"}. O padrão é \code{"auto"} após resolução por \code{match.arg()}. A escolha define o método de consulta dos vizinhos minoritários e altera desempenho, determinismo e compatibilidade com métricas.}
 \item{sby_knn_engine}{String escalar escolhida entre \code{"auto"}, \code{"FNN"}, \code{"BiocNeighbors"} e \code{"RcppHNSW"}. O padrão é \code{"auto"} após resolução. O engine controla a biblioteca usada na busca KNN e, consequentemente, o suporte a busca exata, aproximada, paralelização e métricas não euclidianas.}
-\item{sby_distance_metric}{String escalar escolhida entre \code{"euclidean"}, \code{"ip"} e \code{"cosine"}. O padrão é \code{"euclidean"}. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.}
+\item{sby_knn_distance_metric}{String escalar escolhida entre \code{"euclidean"}, \code{"ip"} e \code{"cosine"}. O padrão é \code{"euclidean"}. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.}
 \item{sby_knn_workers}{Número inteiro positivo de workers usados por engines que aceitam paralelização. O padrão é \code{1L}. Mais workers podem reduzir latência em bases grandes, mas aumentam consumo de CPU e podem exigir engines compatíveis com execução paralela.}
-\item{sby_hnsw_m}{Número inteiro positivo que define a conectividade do grafo HNSW quando \code{RcppHNSW} é usado. O padrão é \code{16L}. Valores maiores podem melhorar a fidelidade da vizinhança aproximada para o ranqueamento NearMiss, com maior custo de memória.}
-\item{sby_hnsw_ef}{Número inteiro positivo que define a quantidade dinâmica de candidatos avaliados na busca HNSW. O padrão é \code{200L}. Aumentar esse valor tende a produzir vizinhos aproximados mais confiáveis e reduz risco de retenção baseada em vizinhos subótimos, mas torna a execução mais lenta. }
+\item{sby_knn_hnsw_m}{Número inteiro positivo que define a conectividade do grafo HNSW quando \code{RcppHNSW} é usado. O padrão é \code{16L}. Valores maiores podem melhorar a fidelidade da vizinhança aproximada para o ranqueamento NearMiss, com maior custo de memória.}
+\item{sby_knn_hnsw_ef}{Número inteiro positivo que define a quantidade dinâmica de candidatos avaliados na busca HNSW. O padrão é \code{200L}. Aumentar esse valor tende a produzir vizinhos aproximados mais confiáveis e reduz risco de retenção baseada em vizinhos subótimos, mas torna a execução mais lenta. }
 }
 \value{Tibble balanceado quando \code{sby_audit = FALSE}; lista de auditoria com dados balanceados, índices, diagnósticos e escala quando \code{sby_audit = TRUE}.}
 \details{
 A função utiliza uma arquitetura de busca espacial configurável para calcular
 vizinhos próximos sobre preditores numéricos previamente padronizados por
 Z-score. A seleção de \code{sby_knn_engine}, \code{sby_knn_algorithm} e
-\code{sby_distance_metric} controla simultaneamente o provedor computacional, a
+\code{sby_knn_distance_metric} controla simultaneamente o provedor computacional, a
 estratégia de indexação e a geometria usada para comparar observações. Quando
 \code{sby_knn_engine = "auto"}, o pacote resolve automaticamente um engine
 compatível com os demais argumentos e com o número de workers solicitado.
@@ -74,7 +74,7 @@ Engine \tab Tipo de busca \tab Métricas suportadas\cr
 A distância euclidiana corresponde à geometria padrão em espaços contínuos e
 é definida por \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. O produto interno
 é expresso como distância por \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Atenção:
-para \code{sby_distance_metric = "ip"}, o pacote realiza normalização L2 prévia
+para \code{sby_knn_distance_metric = "ip"}, o pacote realiza normalização L2 prévia
 automática das matrizes envolvidas na busca para garantir consistência
 espacial da métrica e evitar que diferenças de norma dominem a vizinhança. A
 distância de cosseno é definida por \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}
@@ -85,7 +85,7 @@ forma exata e aceitam somente \code{euclidean}. Em \code{BiocNeighbors}, \code{K
 \code{Vptree} e \code{Exhaustive} representam alternativas exatas, enquanto \code{Annoy} e
 \code{Hnsw} representam alternativas aproximadas; nesse engine, \code{euclidean} e
 \code{cosine} são aceitas. Em \code{RcppHNSW}, a busca é aproximada por grafo HNSW e os
-parâmetros \code{sby_hnsw_m} e \code{sby_hnsw_ef} controlam, respectivamente, a
+parâmetros \code{sby_knn_hnsw_m} e \code{sby_knn_hnsw_ef} controlam, respectivamente, a
 conectividade estrutural do grafo e a largura dinâmica da exploração.
 
 }

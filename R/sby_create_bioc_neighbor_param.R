@@ -6,11 +6,11 @@
 #'
 #' @param sby_knn_algorithm Algoritmo KNN solicitado para o engine BiocNeighbors
 #' @param sby_predictor_column_count Quantidade de colunas preditoras
-#' @param sby_distance_metric Metrica de distancia usada na consulta KNN
+#' @param sby_knn_distance_metric Metrica de distancia usada na consulta KNN
 #'
 #' @return Objeto de parametros BiocNeighbors para consulta KNN
 #' @noRd
-sby_create_bioc_neighbor_param <- function(sby_knn_algorithm, sby_predictor_column_count, sby_distance_metric){
+sby_create_bioc_neighbor_param <- function(sby_knn_algorithm, sby_predictor_column_count, sby_knn_distance_metric){
   
   # Resolve algoritmo BiocNeighbors automatico por dimensionalidade
   if(identical(
@@ -37,23 +37,23 @@ sby_create_bioc_neighbor_param <- function(sby_knn_algorithm, sby_predictor_colu
 
   # Bloqueia produto interno porque BiocNeighbors nao implementa essa metrica
   if(identical(
-    x = sby_distance_metric,
+    x = sby_knn_distance_metric,
     y = "ip"
   )){
 
     # Aborta metrica incompatvel com o engine BiocNeighbors
     sby_adanear_abort(
-      sby_message = "'sby_distance_metric = ip' e suportado apenas por 'sby_knn_engine = RcppHNSW'"
+      sby_message = "'sby_knn_distance_metric = ip' e suportado apenas por 'sby_knn_engine = RcppHNSW'"
     )
   }
 
   # Define nome de distancia aceito pelo BiocNeighbors
   sbyBiocDistance <- switch(
-    sby_distance_metric,
+    sby_knn_distance_metric,
     euclidean = "Euclidean",
     cosine = "Cosine",
     sby_adanear_abort(
-      sby_message = "'sby_distance_metric' invalido para BiocNeighbors"
+      sby_message = "'sby_knn_distance_metric' invalido para BiocNeighbors"
     )
   )
 

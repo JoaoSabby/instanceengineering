@@ -1,18 +1,18 @@
-#' Preparar etapa de balanceamento ADASYN e NearMiss
+#' Preparar etapa de balanceamento ADASYN
 #'
-#' @param x Objeto de etapa `sby_step_adanear` nao treinado
+#' @param x Objeto de etapa `sby_step_adasyn` nao treinado
 #' @param training Dados de treinamento da recipe
 #' @param info Metadados da recipe
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
-#' @return Objeto de etapa `sby_step_adanear` treinado
+#' @return Objeto de etapa treinado
 #' @export
-prep.step_sby_step_adanear <- function(x, training, info = NULL, ...){
+prep.step_sby_step_adasyn <- function(x, training, info = NULL, ...){
   return(sby_prep_step_sampling(
     x = x,
     training = training,
     info = info,
-    sby_step_name = "sby_step_adanear()"
+    sby_step_name = "sby_step_adasyn()"
   ))
 }
 ####
