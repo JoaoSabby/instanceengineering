@@ -25,7 +25,7 @@ sby_extract_formula_data <- function(sby_formula, sby_data){
 
     # Aborta quando os dados nao sao data frame nem matriz
     sby_adanear_abort(
-      sby_message = "'sby_data' deve ser data.frame ou matrix"
+      sby_message = "'sby_data' deve ser tibble, data.frame ou matrix"
     )
   }
 
@@ -96,7 +96,7 @@ sby_extract_formula_data <- function(sby_formula, sby_data){
   }
 
   # Restringe a interface a selecao direta de colunas existentes
-  if(!all(sby_predictor_names %in% names(sby_data_frame))){
+  if(!all(sby_predictor_names %in% colnames(sby_data_frame))){
 
     # Aborta formulas com transformacoes ou interacoes nao materializadas como colunas
     sby_adanear_abort(

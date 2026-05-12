@@ -184,7 +184,7 @@ sby_adasyn <- function(
 
     # Aborta quando o parametro ADASYN nao representa inteiro positivo
     sby_adanear_abort(
-      sby_message = "'sby_knn_over_k' deve ser inteiro positivo"
+      sby_message = "'sby_knn_over_k' deve ser escalar inteiro positivo maior que zero"
     )
   }
 

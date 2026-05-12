@@ -2,3 +2,5 @@
 ^\.github$
 ^Dockerfile$
 ^\.devcontainer$
+^.*\.Rproj$
+^\.Rproj\.user$
