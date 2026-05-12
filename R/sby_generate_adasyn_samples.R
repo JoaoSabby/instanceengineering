@@ -142,7 +142,8 @@ sby_generate_adasyn_samples <- function(
     sby_knn_distance_metric         = sby_knn_distance_metric,
     sby_knn_workers             = sby_knn_workers,
     sby_knn_hnsw_m                  = sby_knn_hnsw_m,
-    sby_knn_hnsw_ef                 = sby_knn_hnsw_ef
+    sby_knn_hnsw_ef                 = sby_knn_hnsw_ef,
+    sby_query_is_data           = TRUE
   )
 
   # Verifica se ha solicitacao de interrupcao apos a consulta KNN minoritaria

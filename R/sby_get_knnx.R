@@ -13,6 +13,7 @@
 #' @param sby_knn_hnsw_m Conectividade HNSW configurada
 #' @param sby_knn_hnsw_ef Lista dinamica HNSW configurada
 #' @param sby_knn_query_chunk_size Tamanho de bloco para consultas KNN
+#' @param sby_query_is_data Indicador de que consulta e referencia sao a mesma matriz
 #'
 #' @return Lista com matrizes `nn.index` e `nn.dist`
 #' @noRd
@@ -26,7 +27,8 @@ sby_get_knnx <- function(
   sby_knn_workers,
   sby_knn_hnsw_m,
   sby_knn_hnsw_ef,
-  sby_knn_query_chunk_size = getOption("instenginer.sby_knn_query_chunk_size", 1000L)
+  sby_knn_query_chunk_size = getOption("instenginer.sby_knn_query_chunk_size", 1000L),
+  sby_query_is_data = FALSE
 ){
   
   # Verifica se ha solicitacao de interrupcao antes da consulta KNN
@@ -43,13 +45,20 @@ sby_get_knnx <- function(
     y = "euclidean"
   )){
 
-    # Normaliza referencia e consulta depois do z-score e antes do engine KNN
-    sby_data  <- SbyNormalizeL2(
+    # Normaliza referencia depois do z-score e antes do engine KNN
+    sby_data <- SbyNormalizeL2(
       sby_x_matrix = sby_data
     )
-    sby_query <- SbyNormalizeL2(
-      sby_x_matrix = sby_query
-    )
+
+    # Reutiliza a mesma matriz normalizada em consultas self-KNN para evitar
+    # uma segunda passagem completa por dados grandes de minoria.
+    sby_query <- if(isTRUE(sby_query_is_data)){
+      sby_data
+    }else{
+      SbyNormalizeL2(
+        sby_x_matrix = sby_query
+      )
+    }
   }
 
   # Executa consulta pelo engine FNN quando selecionado
@@ -141,7 +150,10 @@ sby_get_knnx <- function(
       nrow(sby_data)
     )
 
-    # Define rotina HNSW completa para isolar chamadas nativas longas em modo interrompivel
+    # Define rotina HNSW completa em funcao local. O caminho padrao executa
+    # diretamente para evitar custo alto de fork/serializacao em bases grandes;
+    # o fork permanece disponivel por opcao para investigacoes interativas nas
+    # quais a capacidade de matar chamadas nativas bloqueantes seja prioritaria.
     sby_run_hnsw_query <- function(){
       # Constroi indice HNSW para a matriz de referencia
       sby_hnsw_index <- RcppHNSW::hnsw_build(
@@ -158,11 +170,14 @@ sby_get_knnx <- function(
       # Verifica se ha solicitacao de interrupcao apos construcao do indice HNSW
       sby_adanear_check_user_interrupt()
 
-      # Valida tamanho de bloco especifico para consultas HNSW
+      # Valida tamanho de bloco especifico para consultas HNSW. O valor
+      # padrao acompanha o tamanho geral de blocos KNN para evitar milhares
+      # de chamadas nativas pequenas, que podem transformar execucoes de
+      # minutos em horas em bases grandes.
       sby_hnsw_query_chunk_size <- sby_validate_knn_query_chunk_size(
         sby_knn_query_chunk_size = getOption(
           "instenginer.sby_hnsw_query_chunk_size",
-          100L
+          sby_knn_query_chunk_size
         )
       )
 
@@ -199,10 +214,13 @@ sby_get_knnx <- function(
       return(sby_knn_result)
     }
 
-    # Executa HNSW em fork interrompivel quando suportado para Ctrl+C matar chamadas nativas bloqueantes
+    # Executa HNSW em fork somente quando solicitado explicitamente. Em bases
+    # grandes, retornar matrizes de vizinhos pelo pipe do processo filho pode
+    # dominar o tempo de execucao; por isso o padrao privilegia desempenho e
+    # mantem a interrupcao cooperativa entre blocos de consulta.
     if(isTRUE(getOption(
       x = "instenginer.sby_hnsw_interruptible_fork",
-      default = identical(.Platform$OS.type, "unix")
+      default = FALSE
     ))){
       return(sby_run_interruptible_fork(
         sby_run_hnsw_query()

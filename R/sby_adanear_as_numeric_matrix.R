@@ -9,6 +9,25 @@
 #' @return Matriz numerica com nomes de colunas preservados
 #' @noRd
 sby_adanear_as_numeric_matrix <- function(sby_predictor_data){
+  # Bloqueia Matrix esparsa antes de qualquer conversao densa implicita. As
+  # etapas atuais de z-score, KNN e geracao nativa operam sobre matrix double
+  # densa; aceitar sparse aqui poderia materializar bases grandes na memoria e
+  # parecer travamento do processamento.
+  if(sby_is_sparse_matrix(
+    sby_x = sby_predictor_data
+  )){
+
+    # Aborta com diagnostico explicito em vez de chamar as.matrix silenciosamente
+    sby_adanear_abort(
+      sby_message = paste0(
+        "Matrizes esparsas do pacote Matrix ainda nao sao suportadas por ",
+        "sby_adanear/sby_adasyn/sby_nearmiss. Converta conscientemente para ",
+        "matrix densa somente se houver memoria suficiente, ou use preditores ",
+        "densos ja materializados."
+      )
+    )
+  }
+
   # Converte a entrada para matriz quando os preditores estao em data frame
   if(is.data.frame(sby_predictor_data)){
 
