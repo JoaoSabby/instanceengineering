@@ -29,7 +29,8 @@ Imports:
     recipes,
     rlang,
     Rfast,
-    tibble
+    tibble,
+    glue
 Suggests:
     BiocManager,
     BiocNeighbors,

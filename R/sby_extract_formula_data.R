@@ -100,7 +100,7 @@ sby_extract_formula_data <- function(sby_formula, sby_data){
 
     # Aborta formulas com transformacoes ou interacoes nao materializadas como colunas
     sby_adanear_abort(
-      sby_message = "'sby_formula' deve referenciar colunas existentes em 'sby_data'"
+      sby_message = glue::glue("'sby_formula' deve referenciar colunas existentes em 'sby_data'\n preditores:  {sby_predictor_names}\n colunas dados: {colnames(sby_data_frame)}")
     )
   }
 
