@@ -56,6 +56,15 @@ options(instenginer.sby_knn_query_chunk_size = 1000L)
 options(instenginer.sby_hnsw_query_chunk_size = 100L)
 ```
 
+No Unix, chamadas nativas longas do `RcppHNSW` rodam por padrão em um processo
+filho monitorado pelo R, permitindo que `Ctrl + C` encerre também fases
+bloqueantes como a construção do índice HNSW. Para voltar ao caminho direto,
+use:
+
+```r
+options(instenginer.sby_hnsw_interruptible_fork = FALSE)
+```
+
 ## Funções principais
 
 ```r

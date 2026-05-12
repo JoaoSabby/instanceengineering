@@ -24,6 +24,8 @@ Depends:
 Imports:
     RcppHNSW,
     FNN,
+    parallel,
+    tools,
     cli,
     generics,
     recipes,
