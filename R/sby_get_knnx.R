@@ -148,7 +148,7 @@ sby_get_knnx <- function(
       M = as.integer(sby_knn_hnsw_m),
       ef = sby_effective_ef,
       verbose = FALSE,
-      progress = "bar",
+      progress = "none",
       n_threads = sby_knn_workers,
       byrow = TRUE
     )
@@ -177,7 +177,7 @@ sby_get_knnx <- function(
           k = sby_k,
           ef = sby_effective_ef,
           verbose = FALSE,
-          progress = "bar",
+          progress = "none",
           n_threads = sby_knn_workers,
           byrow = TRUE
         )

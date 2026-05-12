@@ -20,9 +20,8 @@ sby_compute_z_score_params <- function(sby_x_matrix){
 
     # Estima centros e escalas por chamada nativa registrada no pacote
     sby_params <- .Call(
-      "OU_ComputeZScoreParamsC",
-      sby_x_matrix,
-      PACKAGE = "instenginer"
+      OU_ComputeZScoreParamsC,
+      sby_x_matrix
     )
   }else{
 
