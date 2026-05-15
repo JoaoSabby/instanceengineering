@@ -1,4 +1,4 @@
-FROM oraclelinux:9.7
+FROM FROM container-registry.oracle.com/os/oraclelinux:9
 
 ARG R_VERSION=4.5.3
 ARG CRAN=https://cloud.r-project.org
