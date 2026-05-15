@@ -1,3 +1,19 @@
+FROM container-registry.oracle.com/os/oraclelinux:9
+
+ARG R_VERSION=4.5.3
+ARG CRAN=https://cloud.r-project.org
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    TZ=America/Sao_Paulo \
+    CRAN=${CRAN} \
+    R_VERSION=${R_VERSION} \
+    R_REMOTES_NO_ERRORS_FROM_WARNINGS=true \
+    R_KEEP_PKG_SOURCE=yes \
+    MAKEFLAGS=-j2
+
+RUN cat /etc/oracle-release
+
 RUN dnf -y update && \
     dnf -y install \
       which \
@@ -60,8 +76,11 @@ RUN curl -fsSL "https://cran.r-project.org/src/base/R-4/R-${R_VERSION}.tar.gz" \
     ln -s "/opt/R/${R_VERSION}/bin/Rscript" /usr/local/bin/Rscript && \
     rm -rf "/tmp/R-${R_VERSION}" "/tmp/R-${R_VERSION}.tar.gz"
 
-RUN Rscript -e 'library(parallel); install.packages(c("cli", "FNN", "generics", "recipes", "rlang", "RcppHNSW", "Rfast", "tibble", "glue", "stringr", "testthat", "knitr", "rmarkdown", "withr", "callr", "bench", "microbenchmark", "BiocManager"), repos = Sys.getenv("CRAN"), Ncpus = max(1L, detectCores() - 1L))' && \
-    Rscript -e 'library(BiocManager); install(c("BiocNeighbors", "BiocParallel"), ask = FALSE, update = FALSE)'
+RUN Rscript -e 'install.packages(c("cli", "FNN", "generics", "recipes", "rlang", "RcppHNSW", "Rfast", "tibble", "glue", "stringr", "testthat", "knitr", "rmarkdown", "withr", "callr", "bench", "microbenchmark", "BiocManager"), repos = Sys.getenv("CRAN"), Ncpus = max(1L, parallel::detectCores() - 1L))'
+
+RUN Rscript -e 'BiocManager::install(c("BiocNeighbors", "BiocParallel"), ask = FALSE, update = FALSE)'
+
+RUN R --version
 
 WORKDIR /workspace/instenginer
 
