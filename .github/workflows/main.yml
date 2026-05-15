@@ -2,18 +2,42 @@ name: Oracle Linux 9.7 R 4.5.3 validation
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "docker/oraclelinux97-r453/Dockerfile"
+      - ".github/workflows/oraclelinux97-r453.yml"
+      - "R/**"
+      - "src/**"
+      - "DESCRIPTION"
+      - "NAMESPACE"
+      - "tools/docker/**"
 
 jobs:
   docker-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Show commit and Dockerfile
+        run: |
+          echo "Commit:"
+          git rev-parse HEAD
+
+          echo "Dockerfile path:"
+          ls -lah docker/oraclelinux97-r453/Dockerfile
+
+          echo "Dockerfile content:"
+          sed -n '1,180p' docker/oraclelinux97-r453/Dockerfile
+
+          echo "Searching qpdf:"
+          grep -n "qpdf" docker/oraclelinux97-r453/Dockerfile || true
 
       - name: Build Oracle Linux image
         run: |
           docker build \
+            --no-cache \
             -f docker/oraclelinux97-r453/Dockerfile \
             -t instenginer:oraclelinux97-r453 \
             .
@@ -45,8 +69,16 @@ jobs:
             Rscript tools/docker/run_many_tests.R
 
       - name: Show generated files
+        if: always()
         run: |
-          ls -lah test-results
+          echo "Files in test-results:"
+          ls -lah test-results || true
+
+          echo "CSV preview:"
+          for file in test-results/*.csv; do
+            echo "$file"
+            head -n 20 "$file" || true
+          done
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -54,4 +86,4 @@ jobs:
         with:
           name: oraclelinux97-r453-test-results
           path: test-results/
-          
+          if-no-files-found: warn
