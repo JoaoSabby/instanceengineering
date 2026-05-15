@@ -35,7 +35,7 @@
 #' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
 #' @param sby_data Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em `sby_formula`. Não possui valor padrão. Esse objeto define o espaço comum no qual serão calculadas tanto a dificuldade adaptativa do ADASYN quanto a proximidade NearMiss-1.
 #' @param sby_over_ratio Valor numérico escalar que controla a intensidade da sobreamostragem ADASYN antes da etapa NearMiss. O padrão é `0.2`. Valores maiores inserem mais exemplos sintéticos antes da subamostragem, podendo melhorar cobertura da minoria, mas também propagando ruído em regiões ambíguas.
-#' @param sby_under_ratio Valor numérico escalar que controla a fração da classe majoritária retida depois da sobreamostragem. O padrão é `0.5`. Valores menores tornam o pipeline mais agressivo na redução majoritária; valores maiores preservam mais observações originais e tendem a manter maior diversidade majoritária.
+#' @param sby_under_ratio Valor numérico escalar no intervalo `(0, 1]` que controla a razão mínima desejada entre minoria e maioria após o NearMiss-1. O padrão `0.5` permite reter até duas vezes a quantidade minoritária; `1` reduz a maioria até igualar a minoria quando houver registros suficientes.
 #' @param sby_knn_over_k Número inteiro positivo de vizinhos usados pela etapa ADASYN para estimar dificuldade local e gerar amostras sintéticas. O padrão é `5L`. Essa escolha influencia onde a expansão minoritária será concentrada e o grau de suavização da avaliação local.
 #' @param sby_knn_under_k Número inteiro positivo de vizinhos minoritários usados pela etapa NearMiss-1 para ranquear observações majoritárias. O padrão é `5L`. Essa escolha controla a sensibilidade da retenção majoritária à fronteira local criada após a sobreamostragem.
 #' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios nas duas etapas do pipeline. O padrão é `sample.int(10L^5L, 1L)`, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para garantir reprodutibilidade conjunta das amostras sintéticas, desempates, índices retidos e diagnósticos finais.
@@ -181,6 +181,12 @@ sby_adanear <- function(
     sby_knn_engine             = sby_knn_engine
   )
 
+  # Congela os papeis originais para que NearMiss nao remova a classe rara
+  # quando o ADASYN fizer a minoria ultrapassar temporariamente a maioria
+  sby_original_class_roles <- sby_get_binary_class_roles(
+    sby_target_factor = as.factor(sby_target_vector)
+  )
+
   # Executa sobreamostragem ADASYN mantendo matriz escalada para encadeamento
   sby_over_result <- sby_adasyn(
     sby_formula                 = TARGET ~ .,
@@ -220,6 +226,8 @@ sby_adanear <- function(
     sby_input_already_scaled    = TRUE,
     sby_restore_types           = sby_restore_types,
     sby_type_info               = sby_over_result$sby_type_info,
+    sby_fixed_minority_label    = sby_original_class_roles$sby_minority_label,
+    sby_fixed_majority_label    = sby_original_class_roles$sby_majority_label,
     sby_knn_algorithm           = sby_knn_algorithm,
     sby_knn_engine             = sby_knn_engine,
     sby_knn_distance_metric         = sby_knn_distance_metric,

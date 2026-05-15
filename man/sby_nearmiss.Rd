@@ -19,6 +19,8 @@ sby_nearmiss(
   sby_input_already_scaled = FALSE,
   sby_restore_types = TRUE,
   sby_type_info = NULL,
+  sby_fixed_minority_label = NULL,
+  sby_fixed_majority_label = NULL,
   sby_knn_algorithm = c(
     "auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"
   ),
@@ -37,7 +39,7 @@ sby_nearmiss(
 \arguments{
 \item{sby_formula}{Fórmula no formato \code{alvo ~ preditores} usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em \code{sby_data}. Use \code{alvo ~ .} para selecionar todos os demais campos como preditores.}
 \item{sby_data}{Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em \code{sby_formula}.}
-\item{sby_under_ratio}{Valor numérico escalar que representa a fração da classe majoritária a ser retida após a subamostragem. O padrão é \code{0.5}. Valores menores removem mais observações majoritárias e aumentam o balanceamento, enquanto valores maiores preservam mais cobertura da distribuição original.}
+\item{sby_under_ratio}{Valor numérico escalar no intervalo \code{(0, 1]} que representa a razão mínima desejada entre minoria e maioria após a subamostragem. O padrão \code{0.5} permite reter até duas observações majoritárias para cada minoritária; \code{1} reduz a maioria até igualar a minoria.}
 \item{sby_knn_under_k}{Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é \code{5L}. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.}
 \item{sby_seed}{Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é \code{sample.int(10L^5L, 1L)}, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para tornar reprodutíveis desempates, amostragens complementares e a ordem final das observações preservadas.}
 \item{sby_audit}{Indicador lógico escalar que controla o retorno de metadados de auditoria. O padrão é \code{FALSE}, retornando apenas o tibble final. Quando \code{TRUE}, a função retorna lista com índices retidos, distribuições de classe, parâmetros resolvidos e informações de escala.}
@@ -45,6 +47,8 @@ sby_nearmiss(
 \item{sby_input_already_scaled}{Indicador lógico escalar que informa se \code{sby_data} já está em escala Z-score compatível com \code{sby_precomputed_scaling}. O padrão é \code{FALSE}. Quando \code{TRUE}, a função evita reaplicar padronização e interpreta as coordenadas de entrada como prontas para busca KNN.}
 \item{sby_restore_types}{Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados no retorno final. O padrão é \code{TRUE}. Essa escolha preserva compatibilidade com o esquema de dados de entrada; desativá-la reduz pós-processamento e mantém valores no formato numérico resultante das operações matriciais.}
 \item{sby_type_info}{Lista opcional com metadados dos tipos numéricos originais dos preditores. O padrão é \code{NULL}, fazendo a função inferir os tipos quando necessário. Fornecer esse objeto é útil em pipelines encadeados, pois garante que a restauração de tipos use exatamente o mesmo diagnóstico da etapa anterior.}
+\item{sby_fixed_minority_label}{Rótulo interno opcional usado por \code{sby_adanear()} para preservar a classe minoritária original após o ADASYN. O padrão \code{NULL} mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.}
+\item{sby_fixed_majority_label}{Rótulo interno opcional usado por \code{sby_adanear()} para preservar a classe majoritária original após o ADASYN. O padrão \code{NULL} mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.}
 \item{sby_knn_algorithm}{String escalar escolhida entre \code{"auto"}, \code{"kd_tree"}, \code{"cover_tree"}, \code{"brute"}, \code{"Kmknn"}, \code{"Vptree"}, \code{"Exhaustive"}, \code{"Annoy"} e \code{"Hnsw"}. O padrão é \code{"auto"} após resolução por \code{match.arg()}. A escolha define o método de consulta dos vizinhos minoritários e altera desempenho, determinismo e compatibilidade com métricas.}
 \item{sby_knn_engine}{String escalar escolhida entre \code{"auto"}, \code{"FNN"}, \code{"BiocNeighbors"} e \code{"RcppHNSW"}. O padrão é \code{"auto"} após resolução. O engine controla a biblioteca usada na busca KNN e, consequentemente, o suporte a busca exata, aproximada, paralelização e métricas não euclidianas.}
 \item{sby_knn_distance_metric}{String escalar escolhida entre \code{"euclidean"}, \code{"ip"} e \code{"cosine"}. O padrão é \code{"euclidean"}. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.}
