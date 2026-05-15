@@ -8,16 +8,16 @@
 #'
 #' @return Matriz numerica com linhas normalizadas pela norma L2
 #' @noRd
-SbyNormalizeL2 <- function(sby_x_matrix){
+sby_normalize_l2 <- function(sby_x_matrix){
   
   # Calcula norma euclidiana por linha com operacoes vetorizadas base
-  sbyRowNorm <- sqrt(rowSums(sby_x_matrix^2))
+  sby_row_norm <- sqrt(rowSums(sby_x_matrix^2))
 
   # Protege linhas nulas contra divisao por zero sem alterar sua direcao nula
-  sbyRowNorm[sbyRowNorm == 0] <- 1
+  sby_row_norm[sby_row_norm == 0] <- 1
 
   # Divide cada linha pela respectiva norma L2
-  return(sby_x_matrix / sbyRowNorm)
+  return(sby_x_matrix / sby_row_norm)
 }
 ####
 ## Fim

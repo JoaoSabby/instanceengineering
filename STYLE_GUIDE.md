@@ -1007,12 +1007,7 @@ Exemplos:
 
 Se houver função ou variável fora do padrão, esse estilo não deve ser replicado em código novo.
 
-Exemplo legado identificado:
-
-```r
-SbyNormalizeL2()
-sbyRowNorm
-```
+Exemplos legados previamente identificados, como nomes em CamelCase, devem ser renomeados para `snake_case` quando a alteracao for interna e coberta por testes.
 
 ### 21.2 Renomeações
 

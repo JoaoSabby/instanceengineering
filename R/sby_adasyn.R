@@ -31,9 +31,9 @@
 #'   sby_knn_hnsw_ef = 200L
 #' )
 #'
-#' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
+#' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. O lado direito deve referenciar apenas colunas ja existentes; transformacoes, interacoes e offsets precisam ser materializados antes da chamada. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
 #' @param sby_data Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em `sby_formula`. Não possui valor padrão. A escala e a distribuição das colunas preditoras influenciam diretamente a geração sintética, embora o pacote aplique padronização Z-score antes da busca.
-#' @param sby_over_ratio Valor numérico escalar que controla a expansão relativa da classe minoritária. O padrão é `0.2`, indicando uma geração sintética moderada em relação ao déficit observado entre as classes. Valores maiores aproximam mais a contagem minoritária da majoritária, mas aumentam o risco de criar amostras sintéticas em regiões ruidosas.
+#' @param sby_over_ratio Valor numérico escalar que controla a expansão relativa da classe minoritária. O padrão é `0.2`, indicando uma geração sintética moderada; em bases pequenas, qualquer valor positivo gera ao menos uma linha sintética para evitar abortos por arredondamento. Valores maiores aumentam a expansão da minoria, mas também elevam o risco de criar amostras sintéticas em regiões ruidosas.
 #' @param sby_knn_over_k Número inteiro positivo de vizinhos usados para estimar a dificuldade local de cada observação minoritária no critério ADASYN. O padrão é `5L`. Valores maiores tornam a estimativa de dificuldade mais estável e global; valores menores enfatizam estruturas locais e podem reagir fortemente a outliers.
 #' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é `sample.int(10L^5L, 1L)`, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para reproduzir exatamente os vizinhos empatados, as escolhas de interpolação e as matrizes sintéticas geradas.
 #' @param sby_audit Indicador lógico escalar que controla o formato do retorno. O padrão é `FALSE`, retornando apenas o conjunto balanceado final. Quando `TRUE`, a função retorna uma lista com diagnósticos, parâmetros resolvidos e artefatos intermediários úteis para validação metodológica e depuração.
@@ -179,14 +179,11 @@ sby_adasyn <- function(
     sby_seed           = sby_seed
   )
 
-  # Verifica se o numero de vizinhos de sobreamostragem e valido
-  if(!(is.numeric(sby_knn_over_k) && length(sby_knn_over_k) == 1L && !is.na(sby_knn_over_k) && sby_knn_over_k >= 1L)){
-
-    # Aborta quando o parametro ADASYN nao representa inteiro positivo
-    sby_adanear_abort(
-      sby_message = "'sby_knn_over_k' deve ser escalar inteiro positivo maior que zero"
-    )
-  }
+  # Verifica se o numero de vizinhos de sobreamostragem e inteiro positivo
+  sby_knn_over_k <- sby_validate_positive_integer_scalar(
+    sby_value = sby_knn_over_k,
+    sby_name  = "sby_knn_over_k"
+  )
 
   # Converte preditores e preserva nomes de colunas para o processamento matricial
   sby_x_matrix <- sby_adanear_as_numeric_matrix(

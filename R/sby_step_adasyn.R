@@ -30,7 +30,7 @@
 #' @param role Papel armazenado na etapa para compatibilidade com `recipes`.
 #' @param trained Indicador lógico escalar que informa se a etapa já passou por `prep()`.
 #' @param columns Vetor de caracteres ou `NULL` com o nome da coluna de desfecho resolvida durante `prep()`.
-#' @param sby_over_ratio Valor numérico escalar que controla a expansão relativa da classe minoritária.
+#' @param sby_over_ratio Valor numérico escalar positivo que controla a expansão relativa da classe minoritária. Em bases pequenas, valores positivos geram ao menos uma linha sintética para evitar abortos por arredondamento.
 #' @param sby_knn_over_k Número inteiro positivo de vizinhos usados pela etapa ADASYN.
 #' @param sby_seed Valor numérico inteiro usado para inicializar o gerador pseudoaleatório.
 #' @param sby_audit Indicador lógico escalar que controla se metadados de auditoria devem ser preservados.
@@ -82,6 +82,17 @@ sby_step_adasyn <- function(
   sby_audit <- sby_validate_logical_scalar(sby_value = sby_audit, sby_name = "sby_audit")
   sby_restore_types <- sby_validate_logical_scalar(sby_value = sby_restore_types, sby_name = "sby_restore_types")
   skip <- sby_validate_logical_scalar(sby_value = skip, sby_name = "skip")
+
+  # Valida a semente ainda na construcao da etapa para evitar falhas tardias
+  sby_seed <- sby_validate_seed(
+    sby_seed = sby_seed
+  )
+
+  # Valida hiperparametros KNN discretos ainda na construcao da etapa
+  sby_knn_over_k <- sby_validate_positive_integer_scalar(
+    sby_value = sby_knn_over_k,
+    sby_name  = "sby_knn_over_k"
+  )
 
   # Resolve opcoes declaradas de algoritmo, engine e metrica KNN
   sby_knn_algorithm <- match.arg(arg = sby_knn_algorithm)

@@ -6,7 +6,7 @@
 #' @return Vetor de nomes dos pacotes requeridos
 #' @export
 required_pkgs.step_sby_step_adasyn <- function(x, ...){
-  return(c("instenginer", "recipes"))
+  return(sby_required_sampling_pkgs())
 }
 ####
 ## Fim
