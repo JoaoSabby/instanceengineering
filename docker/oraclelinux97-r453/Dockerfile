@@ -55,8 +55,7 @@ RUN dnf -y update && \
       fribidi-devel \
       libicu-devel \
       glibc-langpack-en \
-      glibc-langpack-pt \
-      qpdf && \
+      glibc-langpack-pt && \
     dnf clean all && \
     rm -rf /var/cache/dnf
 
