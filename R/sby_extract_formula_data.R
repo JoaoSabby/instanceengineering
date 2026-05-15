@@ -20,6 +20,22 @@ sby_extract_formula_data <- function(sby_formula, sby_data){
     )
   }
   
+  # Bloqueia matrizes esparsas antes da conversao para data frame. O pipeline
+  # numerico atual e baseado em matrizes densas para z-score, KNN e rotinas C.
+  if(sby_is_sparse_matrix(
+    sby_x = sby_data
+  )){
+
+    # Aborta cedo para evitar densificacao acidental de objetos Matrix grandes
+    sby_adanear_abort(
+      sby_message = paste0(
+        "'sby_data' recebeu uma matriz esparsa do pacote Matrix, mas as ",
+        "rotinas atuais usam matrix double densa. Forneca data.frame/matrix ",
+        "densa ou reduza/materialize os preditores antes do balanceamento."
+      )
+    )
+  }
+
   # Verifica se os dados possuem classe tabular suportada
   if(!(is.data.frame(sby_data) || is.matrix(sby_data))){
     
