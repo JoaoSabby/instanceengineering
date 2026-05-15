@@ -1,0 +1,15 @@
+services:
+  instenginer-test:
+    build:
+      context: .
+      dockerfile: docker/oraclelinux97-r453/Dockerfile
+    image: instenginer:oraclelinux97-r453
+    command: ["Rscript", "tools/docker/run_many_tests.R"]
+    environment:
+      TEST_REPETITIONS: "2"
+      TEST_KNN_WORKERS: "2"
+      TEST_OUTPUT_DIR: "/workspace/instenginer/test-results"
+      ALLOW_TEST_FAILURES: "false"
+    volumes:
+      - ./test-results:/workspace/instenginer/test-results
+    cpus: "2.0"
