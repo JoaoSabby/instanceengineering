@@ -56,6 +56,15 @@ options(instenginer.sby_knn_query_chunk_size = 1000L)
 options(instenginer.sby_hnsw_query_chunk_size = 100L)
 ```
 
+No Unix, chamadas nativas longas do `RcppHNSW` rodam por padrão em um processo
+filho monitorado pelo R, permitindo que `Ctrl + C` encerre também fases
+bloqueantes como a construção do índice HNSW. Para voltar ao caminho direto,
+use:
+
+```r
+options(instenginer.sby_hnsw_interruptible_fork = FALSE)
+```
+
 ## Funções principais
 
 ```r
@@ -160,7 +169,8 @@ sby_data <- tibble::add_column(sby_x, sby_y = sby_y)
 # - sby_formula = sby_y ~ . informa que sby_y é o alvo e as demais colunas são
 #   preditores;
 # - sby_over_ratio controla a geração sintética ADASYN;
-# - sby_under_ratio controla a retenção majoritária no NearMiss-1;
+# - sby_under_ratio controla a razão minoria/maioria final no NearMiss-1;
+#   use 1 para reduzir a majoritária até igualar a minoritária disponível;
 # - sby_seed fixo torna a geração e desempates reproduzíveis.
 sby_balanced <- sby_adanear(
   sby_formula = sby_y ~ .,

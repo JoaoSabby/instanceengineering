@@ -34,7 +34,7 @@
 #'
 #' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
 #' @param sby_data Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em `sby_formula`. Não possui valor padrão. Esses dados definem o espaço no qual as observações majoritárias serão ranqueadas por proximidade à classe minoritária.
-#' @param sby_under_ratio Valor numérico escalar que representa a fração da classe majoritária a ser retida após a subamostragem. O padrão é `0.5`. Valores menores removem mais observações majoritárias e aumentam o balanceamento, enquanto valores maiores preservam mais cobertura da distribuição original.
+#' @param sby_under_ratio Valor numérico escalar no intervalo `(0, 1]` que representa a razão mínima desejada entre minoria e maioria após a subamostragem. O padrão `0.5` permite reter até duas observações majoritárias para cada minoritária; `1` reduz a maioria até igualar a minoria.
 #' @param sby_knn_under_k Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é `5L`. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.
 #' @param sby_seed Valor numérico inteiro utilizado para inicializar o gerador de números pseudoaleatórios. O padrão é `sample.int(10L^5L, 1L)`, gerando uma semente inteira aleatória quando o usuário não informa valor. Informe uma semente fixa para tornar reprodutíveis desempates, amostragens complementares e a ordem final das observações preservadas.
 #' @param sby_audit Indicador lógico escalar que controla o retorno de metadados de auditoria. O padrão é `FALSE`, retornando apenas o tibble final. Quando `TRUE`, a função retorna lista com índices retidos, distribuições de classe, parâmetros resolvidos e informações de escala.
@@ -42,6 +42,8 @@
 #' @param sby_input_already_scaled Indicador lógico escalar que informa se `sby_data` já está em escala Z-score compatível com `sby_precomputed_scaling`. O padrão é `FALSE`. Quando `TRUE`, a função evita reaplicar padronização e interpreta as coordenadas de entrada como prontas para busca KNN.
 #' @param sby_restore_types Indicador lógico escalar que define se tipos numéricos originais devem ser restaurados no retorno final. O padrão é `TRUE`. Essa escolha preserva compatibilidade com o esquema de dados de entrada; desativá-la reduz pós-processamento e mantém valores no formato numérico resultante das operações matriciais.
 #' @param sby_type_info Lista opcional com metadados dos tipos numéricos originais dos preditores. O padrão é `NULL`, fazendo a função inferir os tipos quando necessário. Fornecer esse objeto é útil em pipelines encadeados, pois garante que a restauração de tipos use exatamente o mesmo diagnóstico da etapa anterior.
+#' @param sby_fixed_minority_label Rótulo interno opcional usado por `sby_adanear()` para preservar a classe minoritária original após o ADASYN. O padrão `NULL` mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.
+#' @param sby_fixed_majority_label Rótulo interno opcional usado por `sby_adanear()` para preservar a classe majoritária original após o ADASYN. O padrão `NULL` mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.
 #' @param sby_knn_algorithm String escalar escolhida entre `"auto"`, `"kd_tree"`, `"cover_tree"`, `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"` e `"Hnsw"`. O padrão é `"auto"` após resolução por `match.arg()`. A escolha define o método de consulta dos vizinhos minoritários e altera desempenho, determinismo e compatibilidade com métricas.
 #' @param sby_knn_engine String escalar escolhida entre `"auto"`, `"FNN"`, `"BiocNeighbors"` e `"RcppHNSW"`. O padrão é `"auto"` após resolução. O engine controla a biblioteca usada na busca KNN e, consequentemente, o suporte a busca exata, aproximada, paralelização e métricas não euclidianas.
 #' @param sby_knn_distance_metric String escalar escolhida entre `"euclidean"`, `"ip"` e `"cosine"`. O padrão é `"euclidean"`. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.
@@ -120,6 +122,8 @@ sby_nearmiss <- function(
   sby_input_already_scaled = FALSE,
   sby_restore_types = TRUE,
   sby_type_info = NULL,
+  sby_fixed_minority_label = NULL,
+  sby_fixed_majority_label = NULL,
   sby_knn_algorithm = c("auto", "kd_tree", "cover_tree", "brute", "Kmknn", "Vptree", "Exhaustive", "Annoy", "Hnsw"),
   sby_knn_engine = c("auto", "FNN", "BiocNeighbors", "RcppHNSW"),
   sby_knn_distance_metric = c("euclidean", "ip", "cosine"),
@@ -314,8 +318,10 @@ sby_nearmiss <- function(
   }else{
 
     # Identifica rotulos e indices das classes minoritaria e majoritaria
-    sby_class_roles    <- sby_get_binary_class_roles(
-      sby_target_factor = sby_target_factor
+    sby_class_roles <- sby_get_binary_class_roles(
+      sby_target_factor  = sby_target_factor,
+      sby_minority_label = sby_fixed_minority_label,
+      sby_majority_label = sby_fixed_majority_label
     )
     
     sby_minority_index <- which(
@@ -331,8 +337,10 @@ sby_nearmiss <- function(
 
     # Calcula quantidade de exemplos majoritarios e vizinhos efetivos a reter
     sby_retained_majority_count <- sby_compute_majority_retention_count(
-      sby_target_factor = sby_target_factor,
-      sby_under_ratio   = sby_under_ratio
+      sby_target_factor  = sby_target_factor,
+      sby_under_ratio    = sby_under_ratio,
+      sby_minority_label = sby_class_roles$sby_minority_label,
+      sby_majority_label = sby_class_roles$sby_majority_label
     )
     sby_effective_k <- min(
       as.integer(sby_knn_under_k),

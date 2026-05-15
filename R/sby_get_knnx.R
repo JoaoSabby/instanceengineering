@@ -141,60 +141,76 @@ sby_get_knnx <- function(
       nrow(sby_data)
     )
 
-    # Constroi indice HNSW para a matriz de referencia
-    sby_hnsw_index <- RcppHNSW::hnsw_build(
-      X = sby_data,
-      distance = sby_knn_distance_metric,
-      M = as.integer(sby_knn_hnsw_m),
-      ef = sby_effective_ef,
-      verbose = FALSE,
-      progress = "bar",
-      n_threads = sby_knn_workers,
-      byrow = TRUE
-    )
-
-    # Verifica se ha solicitacao de interrupcao apos construcao do indice HNSW
-    sby_adanear_check_user_interrupt()
-
-    # Valida tamanho de bloco especifico para consultas HNSW
-    sby_hnsw_query_chunk_size <- sby_validate_knn_query_chunk_size(
-      sby_knn_query_chunk_size = getOption(
-        "instenginer.sby_hnsw_query_chunk_size",
-        100L
+    # Define rotina HNSW completa para isolar chamadas nativas longas em modo interrompivel
+    sby_run_hnsw_query <- function(){
+      # Constroi indice HNSW para a matriz de referencia
+      sby_hnsw_index <- RcppHNSW::hnsw_build(
+        X = sby_data,
+        distance = sby_knn_distance_metric,
+        M = as.integer(sby_knn_hnsw_m),
+        ef = sby_effective_ef,
+        verbose = FALSE,
+        progress = "none",
+        n_threads = sby_knn_workers,
+        byrow = TRUE
       )
-    )
 
-    # Consulta vizinhos HNSW em blocos interrompiveis
-    sby_knn_result <- sby_query_knn_in_chunks(
-      sby_query = sby_query,
-      sby_k = sby_k,
-      sby_knn_query_chunk_size = sby_hnsw_query_chunk_size,
-      sby_query_fun = function(sby_query_chunk){
-        # Executa busca HNSW para o bloco corrente
-        sby_hnsw_result <- RcppHNSW::hnsw_search(
-          X = sby_query_chunk,
-          ann = sby_hnsw_index,
-          k = sby_k,
-          ef = sby_effective_ef,
-          verbose = FALSE,
-          progress = "bar",
-          n_threads = sby_knn_workers,
-          byrow = TRUE
+      # Verifica se ha solicitacao de interrupcao apos construcao do indice HNSW
+      sby_adanear_check_user_interrupt()
+
+      # Valida tamanho de bloco especifico para consultas HNSW
+      sby_hnsw_query_chunk_size <- sby_validate_knn_query_chunk_size(
+        sby_knn_query_chunk_size = getOption(
+          "instenginer.sby_hnsw_query_chunk_size",
+          100L
         )
+      )
 
-        # Retorna indices e distancias no contrato comum de KNN
-        return(list(
-          nn.index = sby_hnsw_result$idx,
-          nn.dist  = sby_hnsw_result$dist
-        ))
-      }
-    )
+      # Consulta vizinhos HNSW em blocos interrompiveis
+      sby_knn_result <- sby_query_knn_in_chunks(
+        sby_query = sby_query,
+        sby_k = sby_k,
+        sby_knn_query_chunk_size = sby_hnsw_query_chunk_size,
+        sby_query_fun = function(sby_query_chunk){
+          # Executa busca HNSW para o bloco corrente
+          sby_hnsw_result <- RcppHNSW::hnsw_search(
+            X = sby_query_chunk,
+            ann = sby_hnsw_index,
+            k = sby_k,
+            ef = sby_effective_ef,
+            verbose = FALSE,
+            progress = "none",
+            n_threads = sby_knn_workers,
+            byrow = TRUE
+          )
 
-    # Verifica se ha solicitacao de interrupcao apos consulta HNSW
-    sby_adanear_check_user_interrupt()
+          # Retorna indices e distancias no contrato comum de KNN
+          return(list(
+            nn.index = sby_hnsw_result$idx,
+            nn.dist  = sby_hnsw_result$dist
+          ))
+        }
+      )
 
-    # Retorna resultado KNN produzido pelo engine HNSW
-    return(sby_knn_result)
+      # Verifica se ha solicitacao de interrupcao apos consulta HNSW
+      sby_adanear_check_user_interrupt()
+
+      # Retorna resultado KNN produzido pelo engine HNSW
+      return(sby_knn_result)
+    }
+
+    # Executa HNSW em fork interrompivel quando suportado para Ctrl+C matar chamadas nativas bloqueantes
+    if(isTRUE(getOption(
+      x = "instenginer.sby_hnsw_interruptible_fork",
+      default = identical(.Platform$OS.type, "unix")
+    ))){
+      return(sby_run_interruptible_fork(
+        sby_run_hnsw_query()
+      ))
+    }
+
+    # Mantem caminho direto opcional para ambientes que desativarem isolamento por fork
+    return(sby_run_hnsw_query())
   }
 
   # Verifica disponibilidade dos pacotes BiocNeighbors e BiocParallel

@@ -82,15 +82,16 @@ sby_generate_adasyn_samples <- function(
   # Calcula mascara de vizinhos pertencentes a classe majoritaria
   sby_majority_mask <- sby_target_factor[as.vector(sby_neighbor_index)] == sby_class_roles$sby_majority_label
 
+  # Reaproveita o vetor logico como matriz para evitar copia extra em bases grandes
+  dim(sby_majority_mask) <- dim(sby_neighbor_index)
+
   # Verifica se ha solicitacao de interrupcao antes do calculo de razoes
   sby_adanear_check_user_interrupt()
 
   # Calcula proporcao de vizinhos majoritarios por linha minoritaria
-  sby_majority_ratio <- rowMeans(matrix(
-    data = sby_majority_mask,
-    nrow = nrow(sby_neighbor_index),
-    ncol = ncol(sby_neighbor_index)
-  ))
+  sby_majority_ratio <- rowMeans(
+    x = sby_majority_mask
+  )
 
   # Verifica se ha solicitacao de interrupcao antes da ponderacao de geracao
   sby_adanear_check_user_interrupt()
@@ -174,11 +175,10 @@ sby_generate_adasyn_samples <- function(
 
     # Executa geracao sintetica ADASYN em codigo nativo
     sby_synthetic_matrix <- .Call(
-      "OU_GenerateSyntheticAdasynC",
+      OU_GenerateSyntheticAdasynC,
       sby_minority_matrix,
       sby_minority_neighbor_index,
-      as.integer(sby_synthetic_per_row),
-      PACKAGE = "instenginer"
+      as.integer(sby_synthetic_per_row)
     )
 
     # Verifica se ha solicitacao de interrupcao apos geracao nativa
