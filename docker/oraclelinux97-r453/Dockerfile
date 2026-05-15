@@ -1,4 +1,4 @@
-FROM FROM container-registry.oracle.com/os/oraclelinux:9
+FROM container-registry.oracle.com/os/oraclelinux:9
 
 ARG R_VERSION=4.5.3
 ARG CRAN=https://cloud.r-project.org
@@ -11,6 +11,8 @@ ENV LANG=en_US.UTF-8 \
     R_REMOTES_NO_ERRORS_FROM_WARNINGS=true \
     R_KEEP_PKG_SOURCE=yes \
     MAKEFLAGS=-j2
+
+RUN cat /etc/oracle-release
 
 RUN dnf -y update && \
     dnf -y install \
