@@ -30,7 +30,7 @@
 #' @param role Papel armazenado na etapa para compatibilidade com `recipes`.
 #' @param trained Indicador lógico escalar que informa se a etapa já passou por `prep()`.
 #' @param columns Vetor de caracteres ou `NULL` com o nome da coluna de desfecho resolvida durante `prep()`.
-#' @param sby_under_ratio Valor numérico escalar que controla a fração da classe majoritária retida.
+#' @param sby_under_ratio Valor numérico escalar no intervalo `(0, 1]` que controla a razão mínima desejada entre minoria e maioria após o NearMiss-1.
 #' @param sby_knn_under_k Número inteiro positivo de vizinhos usados pela etapa NearMiss-1.
 #' @param sby_seed Valor numérico inteiro usado para inicializar o gerador pseudoaleatório.
 #' @param sby_audit Indicador lógico escalar que controla se metadados de auditoria devem ser preservados.

@@ -43,7 +43,7 @@ sby_step_nearmiss(
 \item{sby_knn_hnsw_ef}{Lista dinâmica HNSW configurada.}
 \item{skip}{Indicador lógico escalar que define se a etapa deve ser ignorada em novos dados.}
 \item{id}{Identificador recipes da etapa.}
-\item{sby_under_ratio}{Valor numérico escalar que controla a fração da classe majoritária retida.}
+\item{sby_under_ratio}{Valor numérico escalar no intervalo \code{(0, 1]} que controla a razão mínima desejada entre minoria e maioria após o NearMiss-1.}
 \item{sby_knn_under_k}{Número inteiro positivo de vizinhos usados pela etapa NearMiss-1.}
 }
 \value{Objeto \code{recipe} com uma etapa \code{sby_step_nearmiss} adicionada ao pipeline.}
