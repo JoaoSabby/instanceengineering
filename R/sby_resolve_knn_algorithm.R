@@ -28,6 +28,15 @@ sby_resolve_knn_algorithm <- function(sby_knn_algorithm, sby_predictor_column_co
     y = "RcppHNSW"
   )){
 
+    # Informa ao usuario que o engine selecionado gerencia o algoritmo internamente
+    sby_adanear_inform(
+      sby_message = paste0(
+        "KNN automático: sby_knn_algorithm = \"auto\" com sby_knn_engine = \"RcppHNSW\". ",
+        "Justificativa: RcppHNSW controla internamente a estratégia HNSW, então o pacote ",
+        "mantém o algoritmo como auto porque algoritmos externos não são aplicados nessa rota."
+      )
+    )
+
     # Mantem marcador automatico porque o engine ignora algoritmos externos
     return("auto")
   }
@@ -40,8 +49,29 @@ sby_resolve_knn_algorithm <- function(sby_knn_algorithm, sby_predictor_column_co
 
     # Usa busca bruta para dimensionalidade mais alta
     if(sby_predictor_column_count > 15L){
+
+      # Informa ao usuario a selecao automatica e a justificativa da decisao
+      sby_adanear_inform(
+        sby_message = paste0(
+          "KNN automático: sby_knn_algorithm = \"brute\" com sby_knn_engine = \"FNN\". ",
+          "Justificativa: os dados têm ", sby_predictor_column_count,
+          " colunas preditoras, acima do limite de 15; nessa dimensionalidade, ",
+          "a busca bruta tende a ser mais estável que estruturas de árvore."
+        )
+      )
+
       return("brute")
     }
+
+    # Informa ao usuario a selecao automatica e a justificativa da decisao
+    sby_adanear_inform(
+      sby_message = paste0(
+        "KNN automático: sby_knn_algorithm = \"kd_tree\" com sby_knn_engine = \"FNN\". ",
+        "Justificativa: os dados têm ", sby_predictor_column_count,
+        " colunas preditoras, até o limite de 15; nessa dimensionalidade, ",
+        "kd_tree costuma acelerar consultas exatas de vizinhos."
+      )
+    )
 
     # Usa kd-tree para dimensionalidade mais baixa
     return("kd_tree")
@@ -49,8 +79,29 @@ sby_resolve_knn_algorithm <- function(sby_knn_algorithm, sby_predictor_column_co
 
   # Seleciona algoritmo BiocNeighbors por dimensionalidade quando o modo automatico e usado
   if(sby_predictor_column_count > 15L){
+
+    # Informa ao usuario a selecao automatica e a justificativa da decisao
+    sby_adanear_inform(
+      sby_message = paste0(
+        "KNN automático: sby_knn_algorithm = \"Exhaustive\" com sby_knn_engine = \"BiocNeighbors\". ",
+        "Justificativa: os dados têm ", sby_predictor_column_count,
+        " colunas preditoras, acima do limite de 15; a busca exaustiva evita perda ",
+        "de eficiência das árvores em alta dimensionalidade e mantém resultado exato."
+      )
+    )
+
     return("Exhaustive")
   }
+
+  # Informa ao usuario a selecao automatica e a justificativa da decisao
+  sby_adanear_inform(
+    sby_message = paste0(
+      "KNN automático: sby_knn_algorithm = \"Kmknn\" com sby_knn_engine = \"BiocNeighbors\". ",
+      "Justificativa: os dados têm ", sby_predictor_column_count,
+      " colunas preditoras, até o limite de 15; Kmknn é o caminho exato padrão ",
+      "do BiocNeighbors para baixa dimensionalidade."
+    )
+  )
 
   # Usa Kmknn como caminho exato padrao em menor dimensionalidade
   return("Kmknn")
