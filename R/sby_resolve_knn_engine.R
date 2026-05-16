@@ -24,9 +24,27 @@ sby_resolve_knn_engine <- function(sby_knn_engine, sby_knn_workers){
   # Seleciona engine paralelizavel quando mais de um worker foi solicitado
   if(sby_knn_workers > 1L){
 
+    # Informa ao usuario a selecao automatica e a justificativa da decisao
+    sby_adanear_inform(
+      sby_message = paste0(
+        "KNN automático: sby_knn_engine = \"BiocNeighbors\". ",
+        "Justificativa: sby_knn_workers é maior que 1, então o pacote escolheu ",
+        "BiocNeighbors para permitir execução paralela da busca de vizinhos."
+      )
+    )
+
     # Retorna engine BiocNeighbors para execucao com workers multiplos
     return("BiocNeighbors")
   }
+
+  # Informa ao usuario a selecao automatica e a justificativa da decisao
+  sby_adanear_inform(
+    sby_message = paste0(
+      "KNN automático: sby_knn_engine = \"FNN\". ",
+      "Justificativa: sby_knn_workers é igual a 1, então o pacote escolheu ",
+      "FNN como implementação sequencial padrão, simples e eficiente."
+    )
+  )
 
   # Retorna engine FNN como caminho padrao sequencial
   return("FNN")
