@@ -49,12 +49,13 @@ reprodutibilidade.
 
 As rotinas usam KNN para estimar vizinhanças locais. Os principais controles são:
 
-- `sby_knn_engine`: engine de busca (`"auto"`, `"FNN"`, `"BiocNeighbors"`,
-  `"RcppHNSW"`).
-- `sby_knn_algorithm`: algoritmo dentro do engine (`"kd_tree"`, `"cover_tree"`,
-  `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"`, `"Hnsw"`, etc.).
+- `sby_knn_engine`: engine de busca (`"auto"`, `"FNN"`, `"RcppHNSW"`).
+- `sby_knn_algorithm`: algoritmo exato do FNN (`"auto"`, `"kd_tree"`,
+  `"cover_tree"`, `"brute"`).
 - `sby_knn_distance_metric`: métrica (`"euclidean"`, `"cosine"`, `"ip"`).
-- `sby_knn_workers`: número de workers quando o backend oferece paralelismo.
+- `sby_knn_workers`: número de workers. Em `FNN`, consultas exatas são
+  paralelizadas por blocos; em `RcppHNSW`, os workers são repassados aos
+  threads nativos do índice aproximado.
 - `sby_knn_hnsw_m` e `sby_knn_hnsw_ef`: parâmetros do HNSW quando
   `sby_knn_engine = "RcppHNSW"`.
 
@@ -63,7 +64,6 @@ Resumo de compatibilidade:
 | Engine | Tipo de busca | Métricas suportadas |
 |---|---|---|
 | `FNN` | Exata | `euclidean` |
-| `BiocNeighbors` | Exata ou aproximada, conforme `sby_knn_algorithm` | `euclidean`, `cosine` |
 | `RcppHNSW` | Aproximada por HNSW | `euclidean`, `cosine`, `ip` |
 
 Consultas KNN longas são executadas em blocos para permitir interrupção por
@@ -287,13 +287,6 @@ install.packages(c(
 ))
 ```
 
-Dependências opcionais para o engine `BiocNeighbors` e paralelismo via
-Bioconductor:
-
-```r
-install.packages("BiocManager")
-BiocManager::install(c("BiocNeighbors", "BiocParallel"))
-```
 
 ## Ambiente de desenvolvimento
 
