@@ -1,30 +1,161 @@
+# ==============================================================================
+# CONFIGURACAO GLOBAL DO AMBIENTE R
+# ==============================================================================
+#
+# [ INFRAESTRUTURA ALVO ]
+# Sistema Operacional : Oracle Linux 9.7 compativel com Red Hat Enterprise Linux
+# Hardware Base       : 
+# Processador         : 
+# Especificacoes      : 
+#                     : 
+#                     : 
+# Memoria RAM         : 
+#
+# [ OBJETIVO DA CONFIGURACAO ]
+# Estabelece controle de threads, memoria e caminhos de execucao do R
+# Reduz risco de oversubscription, contencao de CPU e uso instavel de RAM
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# DEFINICOES GERAIS DE SISTEMA E AMBIENTE
+# ------------------------------------------------------------------------------
+
+# Define fuso horario padrao da sessao R
 TZ=America/Sao_Paulo
-CRAN=https://cloud.r-project.org
+
+# Define repositorio CRAN oficial para instalacao de pacotes
 R_REPOS=https://cloud.r-project.org
 
+# Define diretorio temporario para arquivos transientes da sessao
 TMPDIR=/workspace/instenginer/tmp
-R_USER_CACHE_DIR=/workspace/instenginer/cache
-R_LIBS_USER=/opt/R/4.5.3/lib/R/library
 
+# ------------------------------------------------------------------------------
+# GERENCIAMENTO DE THREADS E PARALELISMO DE BAIXO NIVEL
+# ------------------------------------------------------------------------------
+
+# Define limite de workers para chamadas baseadas em fork
 MC_CORES=2
-OMP_NUM_THREADS=2
+
+# Define limite global de threads para rotinas OpenMP
+OMP_NUM_THREADS=1
+
+# Mantem threads OpenMP proximas na topologia de CPU
 OMP_PROC_BIND=close
+
+# Define nucleos como locais preferenciais para threads OpenMP
 OMP_PLACES=cores
+
+# Desabilita ajuste automatico do numero de threads OpenMP
 OMP_DYNAMIC=FALSE
+
+# Reduz espera ativa de threads OpenMP ociosas
 OMP_WAIT_POLICY=PASSIVE
 
+# Define limite de threads usads pelo RcppParllel
 RCPP_PARALLEL_NUM_THREADS=1
-R_FUTURE_PLAN=multisession
-R_FUTURE_GLOBALS_MAXSIZE=8GB
-R_FUTURE_SUPPORTSMULTICORE_UNSTABLE=quiet
-R_FUTURE_FORK_ENABLE=FALSE
 
+# Define estrategia padrao de execucao do pacote future
+R_FUTURE_PLAN=sequential
+
+# Define limite maximo de objetos exportados pelo future
+R_FUTURE_GLOBALS_MAXSIZE=4GB
+
+# Suprime avisos do future sobre multicore ou fork instavel
+R_FUTURE_SUPPORTSMULTICORE_UNSTABLE=quiet
+
+# Permite fork via future em sessoes de terminal 
+R_FUTURE_FORK_ENABLE=TRUE
+
+# ------------------------------------------------------------------------------
+# RESTRICOES DE ALGEBRA LINEAR E PROCESSAMENTO VETORIAL
+# ------------------------------------------------------------------------------
+
+# Limita OpenBLAS a uma thread por processo
 OPENBLAS_NUM_THREADS=1
+
+# Limita BLIS a uma thread por processo
 BLIS_NUM_THREADS=1
+
+# Limita NumExpr a uma thread por processo
 NUMEXPR_NUM_THREADS=1
+
+# Limita vecLib a uma thread por processo
 VECLIB_MAXIMUM_THREADS=1
+
+# ==============================================================================
+# MKL — Configuração para o R usar Intel oneMKL como BLAS/LAPACK
+# Prerequisito: /etc/ld.so.conf.d/intel-mkl-oneapi.conf + ldconfig executado
+# ==============================================================================
+
+# Carrega o MKL substituindo o BLAS/LAPACK padrão do R
+# libmkl_intel_lp64 : interface LP64 (inteiros 32-bit) — padrão do R
+# libmkl_gnu_thread : backend OpenMP compatível com GCC (R compilado com GCC)
+# libmkl_core       : núcleo do MKL (dispatcher de kernels AVX-512/AVX2)
+LD_PRELOAD=/opt/intel/oneapi/mkl/latest/lib/libmkl_intel_lp64.so:/opt/intel/oneapi/mkl/latest/lib/libmkl_gnu_thread.so:/opt/intel/oneapi/mkl/latest/lib/libmkl_core.so
+
+# Interface LP64: inteiros de 32-bit — compatível com R padrão
+MKL_INTERFACE_LAYER=LP64
+
+# GNU: usa gomp (GNU OpenMP), compatível com R compilado por GCC
+# Alternativa INTEL: usaria libiomp5, exigiria compiladores Intel
+MKL_THREADING_LAYER=GNU
+
+# Threads MKL: 1 por padrão — as funções ConfigureParallel* sobrescrevem
+# conforme o contexto (tuning, treino, etc.)
 MKL_NUM_THREADS=1
+
+# Desabilita o dispatcher dinâmico de kernels do MKL pelo número de threads
+# evita que o MKL ignore MKL_NUM_THREADS em algumas situações
 MKL_DYNAMIC=FALSE
 
-R_COMPILE_PKGS=1
+# ------------------------------------------------------------------------------
+# DIRETRIZES DO GERENCIADOR DE MEMORIA E GARBAGE COLLECTOR
+# ------------------------------------------------------------------------------
+
+# Limita arenas de memoria criadas pela GNU C Library
+MALLOC_ARENA_MAX=4
+
+# Ajusta politica de crescimento de memoria do R
+R_GC_MEM_GROW=1
+
+# Define teto de memoria virtual enderecavel pelo R
+R_MAX_VSIZE=1200G
+
+# Define limite de heap para processos Java usados pelo R
+JAVA_OPTIONS=-Xmx8g
+_JAVA_OPTIONS=-Xmx8g
+
+# ------------------------------------------------------------------------------
+# OTIMIZACAO DE COMPILACAO E CARGAS MASSIVAS DE I/O
+# ------------------------------------------------------------------------------
+
+# Define nivel de otimizacao do byte compiler do R
+R_COMPILER_OPTIMIZE=3
+
+# Habilita compilacao JIT no nivel maximo suportado pelo R
 R_ENABLE_JIT=3
+
+# Aumenta limite de bibliotecas compartilhadas carregadas no R
+R_MAX_NUM_DLLS=500
+
+# Define limite de threads usadas pelo pacote qs2
+QS_THREADS=2
+
+# Define limite de threads usadas pelo pacote vroom
+VROOM_THREADS=2
+
+# Amplia buffer de leitura usado pelo pacote vroom
+R_VROOM_CONNECTION_SIZE=524288
+
+# Define numero de threads usadas pelo pacote data.table
+R_DATATABLE_NUM_THREADS=2
+
+# Limita percentual de CPUs considerado pelo data.table
+R_DATATABLE_NUM_PROCS_PERCENT=50
+
+# Define limite minimo para paralelismo interno do data.table
+R_DATATABLE_THROTTLE=1024
+
+####
+## Fim
+# 
