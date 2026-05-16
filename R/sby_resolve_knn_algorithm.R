@@ -2,7 +2,7 @@
 #'
 #' @details
 #' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado.
-#' A resolucao considera o engine efetivo para que `auto` produza algoritmos compativeis com FNN ou BiocNeighbors.
+#' A resolucao considera o engine efetivo para que `auto` produza algoritmos compativeis com FNN ou RcppHNSW.
 #'
 #' @param sby_knn_algorithm Algoritmo KNN informado pelo chamador
 #' @param sby_predictor_column_count Quantidade de colunas preditoras
@@ -77,34 +77,11 @@ sby_resolve_knn_algorithm <- function(sby_knn_algorithm, sby_predictor_column_co
     return("kd_tree")
   }
 
-  # Seleciona algoritmo BiocNeighbors por dimensionalidade quando o modo automatico e usado
-  if(sby_predictor_column_count > 15L){
-
-    # Informa ao usuario a selecao automatica e a justificativa da decisao
-    sby_adanear_inform(
-      sby_message = paste0(
-        "KNN automático: sby_knn_algorithm = \"Exhaustive\" com sby_knn_engine = \"BiocNeighbors\". ",
-        "Justificativa: os dados têm ", sby_predictor_column_count,
-        " colunas preditoras, acima do limite de 15; a busca exaustiva evita perda ",
-        "de eficiência das árvores em alta dimensionalidade e mantém resultado exato."
-      )
-    )
-
-    return("Exhaustive")
-  }
-
-  # Informa ao usuario a selecao automatica e a justificativa da decisao
-  sby_adanear_inform(
-    sby_message = paste0(
-      "KNN automático: sby_knn_algorithm = \"Kmknn\" com sby_knn_engine = \"BiocNeighbors\". ",
-      "Justificativa: os dados têm ", sby_predictor_column_count,
-      " colunas preditoras, até o limite de 15; Kmknn é o caminho exato padrão ",
-      "do BiocNeighbors para baixa dimensionalidade."
-    )
+  # Aborta engines desconhecidos para evitar combinacoes obsoletas ou removidas
+  sby_adanear_abort(
+    sby_message = "'sby_knn_engine' deve ser um de 'auto', 'FNN' ou 'RcppHNSW'"
   )
 
-  # Usa Kmknn como caminho exato padrao em menor dimensionalidade
-  return("Kmknn")
 }
 ####
 ## Fim

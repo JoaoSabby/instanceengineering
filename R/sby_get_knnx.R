@@ -1,4 +1,4 @@
-#' Executar consulta KNN usando FNN ou BiocNeighbors/BiocParallel
+#' Executar consulta KNN usando FNN ou RcppHNSW
 #'
 #' @details
 #' A funcao implementa uma unidade interna do fluxo de balanceamento com contrato de entrada explicito e retorno controlado
@@ -100,11 +100,12 @@ sby_get_knnx <- function(
       )
     }
 
-    # Consulta vizinhos FNN em blocos interrompiveis
+    # Consulta vizinhos FNN em blocos interrompiveis, sequenciais ou paralelos
     sby_knn_result <- sby_query_knn_in_chunks(
       sby_query = sby_query,
       sby_k = sby_k,
       sby_knn_query_chunk_size = sby_knn_query_chunk_size,
+      sby_knn_workers = sby_knn_workers,
       sby_query_fun = function(sby_query_chunk){
         # Executa consulta FNN para o bloco corrente
         return(FNN::get.knnx(
@@ -186,6 +187,7 @@ sby_get_knnx <- function(
         sby_query = sby_query,
         sby_k = sby_k,
         sby_knn_query_chunk_size = sby_hnsw_query_chunk_size,
+        sby_knn_workers = 1L,
         sby_query_fun = function(sby_query_chunk){
           # Executa busca HNSW para o bloco corrente
           sby_hnsw_result <- RcppHNSW::hnsw_search(
@@ -231,48 +233,10 @@ sby_get_knnx <- function(
     return(sby_run_hnsw_query())
   }
 
-  # Verifica disponibilidade dos pacotes BiocNeighbors e BiocParallel
-  if(!requireNamespace(
-    package = "BiocNeighbors",
-    quietly = TRUE
-  ) || !requireNamespace(
-    package = "BiocParallel",
-    quietly = TRUE
-  )){
-
-    # Aborta quando dependencias do engine BiocNeighbors estao ausentes
-    sby_adanear_abort(
-      sby_message = "'sby_knn_engine = BiocNeighbors' requer os pacotes BiocNeighbors e BiocParallel. Instale-os com BiocManager::install(c('BiocNeighbors', 'BiocParallel'))."
-    )
-  }
-
-  # Cria parametros de vizinhanca e paralelismo para BiocNeighbors
-  sby_neighbor_param <- sby_create_bioc_neighbor_param(
-    sby_knn_algorithm          = sby_knn_algorithm,
-    sby_predictor_column_count = NCOL(sby_data),
-    sby_knn_distance_metric        = sby_knn_distance_metric
+  # Aborta engines desconhecidos para manter o contrato publico atual
+  sby_adanear_abort(
+    sby_message = "'sby_knn_engine' deve ser um de 'auto', 'FNN' ou 'RcppHNSW'. Use FNN com sby_knn_workers > 1L para paralelismo exato."
   )
-  sby_parallel_param <- sby_create_knn_bioc_parallel_param(
-    sby_knn_workers = sby_knn_workers
-  )
-
-  # Executa consulta KNN pelo engine BiocNeighbors
-  sby_knn_result <- BiocNeighbors::queryKNN(
-    X = sby_data,
-    query = sby_query,
-    k = sby_k,
-    BNPARAM = sby_neighbor_param,
-    BPPARAM = sby_parallel_param
-  )
-
-  # Verifica se ha solicitacao de interrupcao apos consulta BiocNeighbors
-  sby_adanear_check_user_interrupt()
-
-  # Retorna indices e distancias no contrato comum de KNN
-  return(list(
-    nn.index = sby_knn_result$index,
-    nn.dist  = sby_knn_result$distance
-  ))
 }
 
 #' Executar consultas KNN em blocos interrompiveis
@@ -284,11 +248,12 @@ sby_get_knnx <- function(
 #' @param sby_query Matriz de consulta para busca KNN
 #' @param sby_k Numero de vizinhos solicitados
 #' @param sby_knn_query_chunk_size Tamanho de bloco para consultas KNN
+#' @param sby_knn_workers Numero de workers usados para processar blocos de consulta
 #' @param sby_query_fun Funcao que executa consulta KNN em um bloco
 #'
 #' @return Lista com matrizes `nn.index` e `nn.dist`
 #' @noRd
-sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_query_fun){
+sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, sby_knn_workers, sby_query_fun){
   # Calcula numero de linhas da matriz de consulta
   sby_query_rows <- nrow(sby_query)
 
@@ -301,50 +266,123 @@ sby_query_knn_in_chunks <- function(sby_query, sby_k, sby_knn_query_chunk_size, 
     ))
   }
 
-  # Inicializa matrizes de saida e indices de inicio dos blocos
-  sby_nn_index     <- matrix(
-    data = NA_integer_,
-    nrow = sby_query_rows,
-    ncol = sby_k
-  )
-  sby_nn_dist      <- matrix(
-    data = NA_real_,
-    nrow = sby_query_rows,
-    ncol = sby_k
-  )
+  # Cria descritores de blocos preservando a ordem original das linhas
   sby_chunk_starts <- seq.int(
     from = 1L,
     to = sby_query_rows,
     by = sby_knn_query_chunk_size
   )
+  sby_chunk_ranges <- lapply(
+    X = sby_chunk_starts,
+    FUN = function(sby_chunk_start){
+      # Define intervalo de linhas do bloco corrente
+      sby_chunk_end <- min(
+        sby_chunk_start + sby_knn_query_chunk_size - 1L,
+        sby_query_rows
+      )
 
-  # Processa consultas KNN em blocos sequenciais
-  for(sby_chunk_start in sby_chunk_starts){
-    # Verifica interrupcao antes de cada bloco de consulta
-    sby_adanear_check_user_interrupt()
+      # Retorna indices globais do bloco
+      return(seq.int(
+        from = sby_chunk_start,
+        to = sby_chunk_end
+      ))
+    }
+  )
 
-    # Define intervalo de linhas do bloco corrente
-    sby_chunk_end   <- min(
-      sby_chunk_start + sby_knn_query_chunk_size - 1L,
-      sby_query_rows
-    )
-    sby_chunk_index <- seq.int(
-      from = sby_chunk_start,
-      to = sby_chunk_end
-    )
-
+  # Funcao local que executa um bloco e preserva seus indices globais
+  sby_run_chunk <- function(sby_chunk_index){
     # Executa consulta KNN para o bloco corrente
     sby_chunk_result <- sby_query_fun(
       sby_query[sby_chunk_index, , drop = FALSE]
     )
 
-    # Copia indices e distancias do bloco para as matrizes completas
-    sby_nn_index[sby_chunk_index, ] <- sby_chunk_result$nn.index
-    sby_nn_dist[sby_chunk_index, ]  <- sby_chunk_result$nn.dist
-
-    # Verifica interrupcao apos cada bloco de consulta
-    sby_adanear_check_user_interrupt()
+    # Retorna resultado associado ao intervalo original para consolidacao ordenada
+    return(list(
+      sby_chunk_index = sby_chunk_index,
+      nn.index = sby_chunk_result$nn.index,
+      nn.dist = sby_chunk_result$nn.dist
+    ))
   }
+
+  # Limita workers efetivos ao numero real de blocos disponiveis
+  sby_effective_workers <- min(
+    as.integer(sby_knn_workers),
+    length(sby_chunk_ranges)
+  )
+
+  # Processa consultas KNN em blocos sequenciais quando apenas um worker e usado
+  if(sby_effective_workers <= 1L){
+    sby_chunk_results <- vector(
+      mode = "list",
+      length = length(sby_chunk_ranges)
+    )
+
+    # Processa cada bloco com verificacoes cooperativas de interrupcao
+    for(sby_chunk_position in seq_along(sby_chunk_ranges)){
+      # Verifica interrupcao antes de cada bloco de consulta
+      sby_adanear_check_user_interrupt()
+
+      # Executa consulta KNN para o bloco corrente
+      sby_chunk_results[[sby_chunk_position]] <- sby_run_chunk(
+        sby_chunk_ranges[[sby_chunk_position]]
+      )
+
+      # Verifica interrupcao apos cada bloco de consulta
+      sby_adanear_check_user_interrupt()
+    }
+  }else if(identical(
+    x = .Platform$OS.type,
+    y = "windows"
+  )){
+    # Em Windows usa cluster PSOCK; os blocos sao independentes e a ordem do
+    # parLapply acompanha a ordem de entrada, preservando exatidao e alinhamento.
+    sby_cluster <- parallel::makeCluster(
+      spec = sby_effective_workers,
+      type = "PSOCK"
+    )
+    on.exit(
+      expr = parallel::stopCluster(sby_cluster),
+      add = TRUE
+    )
+
+    # Executa blocos em paralelo por sockets
+    sby_chunk_results <- parallel::parLapply(
+      cl = sby_cluster,
+      X = sby_chunk_ranges,
+      fun = sby_run_chunk
+    )
+  }else{
+    # Em sistemas POSIX usa fork para reduzir copias fisicas da matriz de referencia
+    # e manter a consolidacao ordenada dos resultados independentes por bloco.
+    sby_chunk_results <- parallel::mclapply(
+      X = sby_chunk_ranges,
+      FUN = sby_run_chunk,
+      mc.cores = sby_effective_workers,
+      mc.preschedule = TRUE
+    )
+  }
+
+  # Inicializa matrizes de saida
+  sby_nn_index <- matrix(
+    data = NA_integer_,
+    nrow = sby_query_rows,
+    ncol = sby_k
+  )
+  sby_nn_dist <- matrix(
+    data = NA_real_,
+    nrow = sby_query_rows,
+    ncol = sby_k
+  )
+
+  # Consolida resultados por indice global, sem depender da ordem de conclusao
+  for(sby_chunk_result in sby_chunk_results){
+    # Copia indices e distancias do bloco para as matrizes completas
+    sby_nn_index[sby_chunk_result$sby_chunk_index, ] <- sby_chunk_result$nn.index
+    sby_nn_dist[sby_chunk_result$sby_chunk_index, ]  <- sby_chunk_result$nn.dist
+  }
+
+  # Verifica se ha solicitacao de interrupcao apos consolidacao dos blocos
+  sby_adanear_check_user_interrupt()
 
   # Retorna matrizes completas de indices e distancias
   return(list(
