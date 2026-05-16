@@ -44,60 +44,116 @@
 #' @param sby_type_info Lista opcional com metadados dos tipos numéricos originais dos preditores. O padrão é `NULL`, fazendo a função inferir os tipos quando necessário. Fornecer esse objeto é útil em pipelines encadeados, pois garante que a restauração de tipos use exatamente o mesmo diagnóstico da etapa anterior.
 #' @param sby_fixed_minority_label Rótulo interno opcional usado por `sby_adanear()` para preservar a classe minoritária original após o ADASYN. O padrão `NULL` mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.
 #' @param sby_fixed_majority_label Rótulo interno opcional usado por `sby_adanear()` para preservar a classe majoritária original após o ADASYN. O padrão `NULL` mantém o comportamento autônomo de inferir os papéis pelas contagens atuais.
-#' @param sby_knn_algorithm String escalar escolhida entre `"auto"`, `"kd_tree"`, `"cover_tree"`, `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"` e `"Hnsw"`. O padrão é `"auto"` após resolução por `match.arg()`. A escolha define o método de consulta dos vizinhos minoritários e altera desempenho, determinismo e compatibilidade com métricas.
-#' @param sby_knn_engine String escalar escolhida entre `"auto"`, `"FNN"`, `"BiocNeighbors"` e `"RcppHNSW"`. O padrão é `"auto"` após resolução. O engine controla a biblioteca usada na busca KNN e, consequentemente, o suporte a busca exata, aproximada, paralelização e métricas não euclidianas.
-#' @param sby_knn_distance_metric String escalar escolhida entre `"euclidean"`, `"ip"` e `"cosine"`. O padrão é `"euclidean"`. A métrica define a distância média usada para decidir quais observações majoritárias são mais próximas da classe minoritária e devem ser retidas.
+#' @param sby_knn_algorithm String escalar que escolhe a estratégia de busca KNN: `"auto"`, `"kd_tree"`, `"cover_tree"`, `"brute"`, `"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"` ou `"Hnsw"`. Use `"auto"` para deixar o pacote escolher uma opção compatível com o engine e a dimensionalidade; informe uma alternativa explícita quando quiser controlar o compromisso entre exatidão, velocidade de execução, consumo de memória e suporte a métricas. Consulte os detalhes para recomendações por algoritmo.
+#' @param sby_knn_engine String escalar que escolhe a biblioteca usada para executar a busca KNN: `"auto"`, `"FNN"`, `"BiocNeighbors"` ou `"RcppHNSW"`. Na maioria dos casos, mantenha `"auto"`; informe explicitamente apenas quando precisar de uma implementação específica, paralelismo via `BiocNeighbors`, métricas não euclidianas ou busca aproximada HNSW por `RcppHNSW`. Consulte os detalhes para saber quando o engine precisa ser declarado.
+#' @param sby_knn_distance_metric String escalar que define a geometria da vizinhança: `"euclidean"`, `"cosine"` ou `"ip"`. A escolha muda o significado de proximidade e também restringe engines e algoritmos disponíveis; `"euclidean"` é a opção mais geral, `"cosine"` privilegia direção angular e `"ip"` usa produto interno via `RcppHNSW`. Consulte os detalhes para recomendações.
 #' @param sby_knn_workers Número inteiro positivo de workers usados por engines que aceitam paralelização. O padrão é `1L`. Mais workers podem reduzir latência em bases grandes, mas aumentam consumo de CPU e podem exigir engines compatíveis com execução paralela.
-#' @param sby_knn_hnsw_m Número inteiro positivo que define a conectividade do grafo HNSW quando `RcppHNSW` é usado. O padrão é `16L`. Valores maiores podem melhorar a fidelidade da vizinhança aproximada para o ranqueamento NearMiss, com maior custo de memória.
-#' @param sby_knn_hnsw_ef Número inteiro positivo que define a quantidade dinâmica de candidatos avaliados na busca HNSW. O padrão é `200L`. Aumentar esse valor tende a produzir vizinhos aproximados mais confiáveis e reduz risco de retenção baseada em vizinhos subótimos, mas torna a execução mais lenta.
+#' @param sby_knn_hnsw_m Número inteiro positivo usado apenas quando o engine efetivo é `"RcppHNSW"`. Controla a conectividade máxima do grafo (`M`): valores maiores aumentam a chance de recuperar vizinhos melhores e tornam o índice mais robusto, mas consomem mais memória e tempo de construção. O padrão `16L` costuma ser um bom equilíbrio; aumente em bases grandes, ruidosas ou de alta dimensionalidade quando recall for mais importante que memória.
+#' @param sby_knn_hnsw_ef Número inteiro positivo usado apenas quando o engine efetivo é `"RcppHNSW"`. Controla a largura da lista dinâmica de candidatos (`ef`) durante construção/consulta: valores maiores aproximam a busca do resultado exato e estabilizam ADASYN/NearMiss, mas deixam as consultas mais lentas. O padrão `200L` prioriza qualidade; reduza para velocidade ou aumente quando a vizinhança aproximada precisar de mais fidelidade.
 #'
 #' @details
-#' A função utiliza uma arquitetura de busca espacial configurável para calcular
-#' vizinhos próximos sobre preditores numéricos previamente padronizados por
-#' Z-score. A seleção de `sby_knn_engine`, `sby_knn_algorithm` e
-#' `sby_knn_distance_metric` controla simultaneamente o provedor computacional, a
-#' estratégia de indexação e a geometria usada para comparar observações. Quando
-#' `sby_knn_engine = "auto"`, o pacote resolve automaticamente um engine
-#' compatível com os demais argumentos e com o número de workers solicitado.
+#' A função utiliza uma arquitetura KNN configurável sobre preditores numéricos
+#' padronizados por Z-score. Três escolhas trabalham em conjunto:
+#' `sby_knn_algorithm` define a estrutura/estratégia de busca,
+#' `sby_knn_engine` define a implementação computacional e
+#' `sby_knn_distance_metric` define a noção de proximidade.
 #'
-#' ## Opções de `sby_knn_distance_metric`
+#' ## Preciso informar `sby_knn_engine`?
 #'
-#' A métrica escolhida deve ser compatível com `sby_knn_engine` e
-#' `sby_knn_algorithm`. As opções são:
+#' Em geral, não: para o uso cotidiano, mantenha `sby_knn_engine = "auto"` e
+#' `sby_knn_algorithm = "auto"`. Nesse modo, o pacote usa `FNN` em execução
+#' sequencial e `BiocNeighbors` quando `sby_knn_workers > 1L`; o algoritmo também
+#' é escolhido automaticamente pela dimensionalidade dos preditores. Informe o
+#' engine explicitamente quando quiser garantir uma biblioteca específica, usar
+#' paralelismo de `BiocNeighbors`, usar `RcppHNSW`, ou quando escolher um
+#' algoritmo que pertence a uma família específica. Na API atual, informar apenas
+#' `sby_knn_algorithm = "Hnsw"`, `"Annoy"`, `"Kmknn"`, `"Vptree"` ou
+#' `"Exhaustive"` não substitui a escolha do engine: declare
+#' `sby_knn_engine = "BiocNeighbors"` para esses algoritmos, ou
+#' `sby_knn_engine = "RcppHNSW"` quando quiser a implementação HNSW do pacote
+#' `RcppHNSW`.
 #'
-#' ### `euclidean`
+#' ## Engines disponíveis
 #'
-#' Distância euclidiana, definida por
-#' \eqn{d(x, y) = \sqrt{\sum_i (x_i - y_i)^2}}. É a opção padrão e a mais ampla
-#' em termos de compatibilidade. Com `sby_knn_engine = "FNN"`, opera somente de
-#' forma exata com `sby_knn_algorithm` em `"auto"`, `"kd_tree"`, `"cover_tree"`
-#' ou `"brute"`. Com `sby_knn_engine = "BiocNeighbors"`, pode ser exata quando
-#' `sby_knn_algorithm` é `"Kmknn"`, `"Vptree"` ou `"Exhaustive"`, ou aproximada
-#' quando o algoritmo é `"Annoy"` ou `"Hnsw"`. Com
-#' `sby_knn_engine = "RcppHNSW"`, a busca é sempre aproximada por grafo HNSW e os
-#' parâmetros `sby_knn_hnsw_m` e `sby_knn_hnsw_ef` controlam conectividade e
-#' exploração.
+#' | Engine | Melhor para | Vantagens | Limitações e cuidados |
+#' |---|---|---|---|
+#' | `"auto"` | Uso recomendado quando você não precisa controlar a biblioteca. | Reduz configuração manual, escolhe um caminho compatível com workers e mantém uma boa opção padrão. | Não expressa intenção metodológica específica; se você precisa de HNSW, Annoy, cosseno, produto interno ou paralelismo controlado, prefira declarar engine/algoritmo. |
+#' | `"FNN"` | Bases pequenas a médias, distância euclidiana, execução sequencial e busca exata. | Simples, rápido para baixa/média dimensionalidade, determinístico e sem aproximação. | Aceita apenas `"euclidean"` neste pacote; não usa `sby_knn_workers`; só combina com `"auto"`, `"kd_tree"`, `"cover_tree"` ou `"brute"`. |
+#' | `"BiocNeighbors"` | Busca exata ou aproximada com suporte a paralelismo e métrica `"cosine"`. | Oferece vários algoritmos (`"Kmknn"`, `"Vptree"`, `"Exhaustive"`, `"Annoy"`, `"Hnsw"`), integra `BiocParallel` e permite escolher entre exatidão e aproximação. | Requer `BiocNeighbors` e `BiocParallel`; não suporta `"ip"` neste pacote; algoritmos aproximados podem variar em recall. |
+#' | `"RcppHNSW"` | Bases grandes, alta dimensionalidade, métricas `"cosine"`/`"ip"` e consultas em que velocidade é mais importante que exatidão perfeita. | Implementa HNSW de alto desempenho, usa `sby_knn_workers`, costuma escalar melhor que busca exata e suporta `"euclidean"`, `"cosine"` e `"ip"`. | A busca é aproximada; exige calibrar `sby_knn_hnsw_m` e `sby_knn_hnsw_ef`; consome memória para o grafo; resultados podem diferir de uma busca exata quando `ef` é baixo. |
 #'
-#' ### `cosine`
+#' ## Algoritmos disponíveis
 #'
-#' Distância de cosseno, definida por
-#' \eqn{d(x, y) = 1 - \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \sqrt{\sum_i y_i^2}}}.
-#' Privilegia a orientação angular dos vetores em vez da magnitude absoluta. Não
-#' é aceita por `sby_knn_engine = "FNN"`. Com
-#' `sby_knn_engine = "BiocNeighbors"`, pode ser exata com `"Kmknn"`, `"Vptree"`
-#' ou `"Exhaustive"`, ou aproximada com `"Annoy"` ou `"Hnsw"`. Com
-#' `sby_knn_engine = "RcppHNSW"`, a busca é aproximada por HNSW. Para manter a
-#' consistência angular, o pacote aplica normalização L2 antes da consulta KNN.
+#' | Algoritmo | Engine compatível | Tipo | Quando usar | Evite quando |
+#' |---|---|---|---|---|
+#' | `"auto"` | Todos | Depende do engine | Melhor ponto de partida; deixa o pacote escolher `"kd_tree"`/`"brute"` em `FNN`, `"Kmknn"`/`"Exhaustive"` em `BiocNeighbors`, ou o HNSW interno em `RcppHNSW`. | Você precisa reproduzir exatamente a mesma estrutura de busca entre ambientes ou documentar uma escolha metodológica específica. |
+#' | `"kd_tree"` | `FNN` | Exato | Dados euclidianos com poucas ou médias dimensões; tende a ser eficiente quando as partições espaciais ainda discriminam bem os vizinhos. | Alta dimensionalidade, muitas variáveis ruidosas ou métrica não euclidiana. |
+#' | `"cover_tree"` | `FNN` | Exato | Alternativa exata para dados euclidianos quando a estrutura intrínseca pode favorecer árvore de cobertura. | Quando testes rápidos mostram desempenho inferior a `"kd_tree"`/`"brute"`; não serve para cosseno ou produto interno. |
+#' | `"brute"` | `FNN` | Exato | Alta dimensionalidade moderada, bases pequenas/médias, auditorias ou cenários em que simplicidade e previsibilidade importam mais que indexação. | Bases muito grandes, pois compara muitos pares e pode ficar lento. |
+#' | `"Kmknn"` | `BiocNeighbors` | Exato | Padrão exato de `BiocNeighbors` para menor dimensionalidade; bom equilíbrio entre velocidade e exatidão com `"euclidean"` ou `"cosine"`. | Bases muito grandes ou de alta dimensionalidade em que busca aproximada seria aceitável. |
+#' | `"Vptree"` | `BiocNeighbors` | Exato | Busca exata baseada em árvore por pontos de vantagem; útil para comparar alternativas exatas, especialmente com métricas suportadas pelo engine. | Quando a dimensionalidade reduz a eficácia da árvore ou quando `"Exhaustive"` é mais previsível. |
+#' | `"Exhaustive"` | `BiocNeighbors` | Exato | Referência robusta para alta dimensionalidade, validação de resultados aproximados e conjuntos em que o custo total ainda é aceitável. | Bases grandes com muitas consultas, pois pode ser computacionalmente caro. |
+#' | `"Annoy"` | `BiocNeighbors` | Aproximado | Bases grandes em que uma aproximação rápida é aceitável, especialmente para exploração, pré-processamento e redução de custo com `"euclidean"` ou `"cosine"`. | Auditorias que exigem vizinhos exatos; uso de `"ip"`; casos sensíveis a pequenas mudanças na vizinhança. |
+#' | `"Hnsw"` | `BiocNeighbors` | Aproximado | Quando você quer HNSW dentro do ecossistema `BiocNeighbors`/`BiocParallel`, com `"euclidean"` ou `"cosine"`. | Quando precisa de `"ip"` ou dos controles `sby_knn_hnsw_m`/`sby_knn_hnsw_ef` da rota `RcppHNSW`; nesse caso use `sby_knn_engine = "RcppHNSW"`. |
 #'
-#' ### `ip`
+#' ## Desempenho, memória e matrizes esparsas
 #'
-#' Produto interno expresso como distância por
-#' \eqn{d(x, y) = 1 - \sum_i x_i y_i}. Essa opção é suportada apenas por
-#' `sby_knn_engine = "RcppHNSW"`; portanto, a busca é sempre aproximada e depende
-#' dos parâmetros HNSW `sby_knn_hnsw_m` e `sby_knn_hnsw_ef`. Ela não é compatível
-#' com `sby_knn_engine = "FNN"` nem com `sby_knn_engine = "BiocNeighbors"`,
-#' independentemente de `sby_knn_algorithm`. O pacote aplica normalização L2
-#' prévia para evitar que diferenças de norma dominem a vizinhança.
+#' A velocidade deve ser interpretada como um atributo de qualidade da
+#' configuração KNN, junto com fidelidade da vizinhança, consumo de memória e
+#' compatibilidade de métrica. Em termos práticos:
+#'
+#' | Escolha | Velocidade esperada | Memória | Por que isso acontece |
+#' |---|---|---|---|
+#' | Árvores exatas (`"kd_tree"`, `"cover_tree"`, `"Kmknn"`, `"Vptree"`) | Podem ser rápidas em baixa/média dimensionalidade. | Mantêm estruturas auxiliares moderadas. | A indexação evita comparar todos os pares, mas perde eficiência quando muitas dimensões tornam as partições pouco seletivas. |
+#' | Busca exaustiva (`"brute"`, `"Exhaustive"`) | Mais lenta em bases grandes, porém previsível. | Em geral usa menos memória de índice. | Calcula distâncias diretamente; não paga custo de construção de índice, mas o tempo cresce com número de linhas, consultas e colunas. |
+#' | Aproximados (`"Annoy"`, `"Hnsw"`, `RcppHNSW`) | Normalmente mais rápidos em bases grandes ou de alta dimensionalidade. | Usam memória adicional para índices; HNSW cresce com `sby_knn_hnsw_m`. | Aceitam trocar exatidão por velocidade: consultam apenas parte do espaço de busca e recuperam vizinhos prováveis. Aumentar `sby_knn_hnsw_ef` melhora recall, mas aumenta latência. |
+#' | Paralelismo (`sby_knn_workers > 1L`) | Pode reduzir tempo de consulta em matrizes grandes. | Aumenta uso simultâneo de CPU e pode elevar pressão de memória. | O trabalho é dividido entre workers quando o engine suporta paralelização, sobretudo em `BiocNeighbors` e `RcppHNSW`. |
+#'
+#' As rotinas atuais operam sobre `matrix` numérica densa após seleção de
+#' preditores e padronização. Matrizes esparsas do pacote `Matrix` são rejeitadas
+#' antes de densificação implícita para evitar estouro de memória. Portanto, em
+#' dados muito esparsos, materialize conscientemente uma matriz densa somente se
+#' houver memória suficiente, reduza dimensionalidade/seleção de variáveis antes
+#' do balanceamento, ou use outro pré-processamento que produza preditores densos.
+#' Em matrizes densas muito largas, prefira testar uma busca aproximada ou uma
+#' busca exaustiva paralelizável, pois árvores exatas tendem a perder vantagem.
+#'
+#' ## Métricas de distância
+#'
+#' | Métrica | Interpretação | Compatibilidade | Recomendação |
+#' |---|---|---|---|
+#' | `"euclidean"` | Distância geométrica usual após Z-score; pontos são próximos quando têm valores padronizados parecidos em magnitude e direção. | Todos os engines; exata em `FNN`/algoritmos exatos de `BiocNeighbors` e aproximada em Annoy/HNSW/RcppHNSW. | Use como padrão para variáveis tabulares numéricas, especialmente quando diferenças de magnitude padronizada são relevantes. |
+#' | `"cosine"` | Distância angular; compara a orientação dos vetores e reduz a influência da norma após normalização L2. | `BiocNeighbors` e `RcppHNSW`; não é aceita por `FNN`. | Use quando o padrão relativo entre variáveis importa mais que o tamanho absoluto, como composições, assinaturas de perfil e vetores de alta dimensionalidade já materializados como matriz densa. |
+#' | `"ip"` | Produto interno convertido em distância; após normalização L2, fica próximo de uma comparação por similaridade angular. | Somente `RcppHNSW` neste pacote. | Use quando o modelo conceitual é similaridade por produto interno ou quando você precisa alinhar a busca a embeddings/vetores normalizados; requer busca aproximada. |
+#'
+#' ## Parâmetros exclusivos da rota HNSW
+#'
+#' Os argumentos `sby_knn_hnsw_m` e `sby_knn_hnsw_ef` só afetam a rota
+#' `sby_knn_engine = "RcppHNSW"`; eles não configuram o `"Hnsw"` de
+#' `BiocNeighbors`. `sby_knn_hnsw_m`
+#' representa a conectividade máxima do grafo: valores maiores criam mais arestas,
+#' melhoram o recall e tornam a busca mais robusta, mas aumentam memória e tempo
+#' de construção. O padrão `16L` é conservador; valores como 24 ou 32 podem ser
+#' úteis em bases grandes, ruidosas ou de alta dimensionalidade. `sby_knn_hnsw_ef`
+#' representa quantos candidatos são explorados dinamicamente na busca: deve ser
+#' pelo menos tão grande quanto o número de vizinhos solicitado e, internamente, é
+#' limitado ao número de linhas da base de referência. O padrão `200L` favorece
+#' qualidade; reduza para acelerar quando pequenas perdas de recall forem
+#' aceitáveis, ou aumente quando NearMiss/ADASYN ficarem sensíveis a vizinhos
+#' aproximados subótimos.
+#'
+#' ## Recomendações práticas
+#'
+#' - Comece com `sby_knn_engine = "auto"`, `sby_knn_algorithm = "auto"` e
+#'   `sby_knn_distance_metric = "euclidean"`.
+#' - Para auditoria, bases pequenas ou necessidade de vizinhos exatos, prefira
+#'   `FNN`/`"brute"` ou algoritmos exatos de `BiocNeighbors`.
+#' - Para paralelismo e métrica cosseno, use `sby_knn_engine = "BiocNeighbors"`.
+#' - Para bases grandes, embeddings, `"ip"` ou alta dimensionalidade, use
+#'   `sby_knn_engine = "RcppHNSW"` e ajuste `sby_knn_hnsw_m`/`sby_knn_hnsw_ef`.
+#' - Em ADASYN, vizinhos aproximados podem mudar quais regiões recebem amostras
+#'   sintéticas; em NearMiss, podem mudar quais exemplos majoritários são retidos.
+#'   Aumente `sby_knn_hnsw_ef` quando essa estabilidade for importante.
 #'
 #' @references
 #' He, H., Bai, Y., Garcia, E. A., & Li, S. (2008). ADASYN: Adaptive synthetic
