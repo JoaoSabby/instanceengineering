@@ -1,8 +1,8 @@
-###
-# Perfil global do R para machine learning preditivo
+########################################################################
+# Perfil global do R 
 # Sistema alvo: Oracle Linux ou Red Hat compativel
 # Objetivo: aplicar configuracoes leves e seguras em qualquer sessao R
-###
+########################################################################
 
 # Define opcoes globais leves
 # Objetivo: padronizar comportamento do R sem carregar pacotes pesados
