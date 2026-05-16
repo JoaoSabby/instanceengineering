@@ -33,13 +33,13 @@ jobs:
           sed -n '1,240p' docker/oraclelinux97-r453/Dockerfile
 
           echo "Renviron:"
-          sed -n '1,240p' docker/r-config/.Renviron
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/.Renviron
 
           echo "Rprofile:"
-          sed -n '1,240p' docker/r-config/.Rprofile
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/.Rprofile
 
           echo "Makevars:"
-          sed -n '1,240p' docker/r-config/Makevars
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/Makevars
 
           echo "Searching unsupported packages:"
           grep -R -n "qpdf" docker/oraclelinux97-r453 || true
