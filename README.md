@@ -27,6 +27,24 @@ pública foi organizada para usar:
 > esquerdo da fórmula identifica o desfecho e o lado direito identifica os
 > preditores. Use `~ .` para usar todas as demais colunas como preditores.
 
+### Contrato de fórmulas e dados
+
+As funções públicas aceitam fórmulas para **selecionar colunas já existentes** em
+`sby_data`. Transformações, interações e offsets da sintaxe de fórmulas do R
+(por exemplo, `log(x)`, `x1:x2` ou `offset(z)`) devem ser calculados antes da
+chamada e armazenados como colunas explícitas. Essa restrição evita divergências
+entre a seleção por fórmula, a restauração de tipos e o pipeline matricial usado
+pelas rotinas KNN e nativas.
+
+Preditores devem ser numéricos, finitos e densos. Matrizes esparsas do pacote
+`Matrix` são rejeitadas com erro explícito para evitar densificação acidental de
+bases grandes. Colunas constantes também são rejeitadas porque a padronização
+Z-score exige desvio padrão positivo.
+
+Para bases pequenas, `sby_over_ratio` positivo sempre gera ao menos uma linha
+sintética; use uma razão positiva explícita e uma `sby_seed` inteira para
+reprodutibilidade.
+
 ## KNN, métricas e engines
 
 As rotinas usam KNN para estimar vizinhanças locais. Os principais controles são:

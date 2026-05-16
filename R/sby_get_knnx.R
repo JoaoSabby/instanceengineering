@@ -46,7 +46,7 @@ sby_get_knnx <- function(
   )){
 
     # Normaliza referencia depois do z-score e antes do engine KNN
-    sby_data <- SbyNormalizeL2(
+    sby_data <- sby_normalize_l2(
       sby_x_matrix = sby_data
     )
 
@@ -55,7 +55,7 @@ sby_get_knnx <- function(
     sby_query <- if(isTRUE(sby_query_is_data)){
       sby_data
     }else{
-      SbyNormalizeL2(
+      sby_normalize_l2(
         sby_x_matrix = sby_query
       )
     }

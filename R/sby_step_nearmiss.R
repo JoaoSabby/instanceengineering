@@ -83,6 +83,17 @@ sby_step_nearmiss <- function(
   sby_restore_types <- sby_validate_logical_scalar(sby_value = sby_restore_types, sby_name = "sby_restore_types")
   skip <- sby_validate_logical_scalar(sby_value = skip, sby_name = "skip")
 
+  # Valida a semente ainda na construcao da etapa para evitar falhas tardias
+  sby_seed <- sby_validate_seed(
+    sby_seed = sby_seed
+  )
+
+  # Valida hiperparametros KNN discretos ainda na construcao da etapa
+  sby_knn_under_k <- sby_validate_positive_integer_scalar(
+    sby_value = sby_knn_under_k,
+    sby_name  = "sby_knn_under_k"
+  )
+
   # Resolve opcoes declaradas de algoritmo, engine e metrica KNN
   sby_knn_algorithm <- match.arg(arg = sby_knn_algorithm)
   sby_knn_engine <- match.arg(arg = sby_knn_engine)

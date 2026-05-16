@@ -119,9 +119,12 @@ sby_extract_formula_data <- function(sby_formula, sby_data){
     # Aborta formulas com transformacoes ou interacoes nao materializadas como colunas
     sby_adanear_abort(
       sby_message = paste0(
-        "'sby_formula' deve referenciar colunas existentes em 'sby_data'", 
-        " preditores   : ", paste0("Qtd: ", length(sby_predictor_names),   " ", sby_predictor_names[1],   "-", sby_data_frame[length(sby_data_frame)]), 
-        " colunas dados: ", paste0("Qtd: ", length(predictors_data_frame), " ", predictors_data_frame[1], "-", predictors_data_frame[length(predictors_data_frame)])
+        "'sby_formula' deve referenciar apenas colunas existentes em 'sby_data'. ",
+        "Transformacoes, interacoes e offsets devem ser materializados em colunas ",
+        "antes de chamar instenginer. Preditores solicitados: ",
+        paste(sby_predictor_names, collapse = ", "),
+        "; colunas disponiveis: ",
+        paste(predictors_data_frame, collapse = ", ")
       )
     )
   }

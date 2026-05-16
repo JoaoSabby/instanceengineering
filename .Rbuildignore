@@ -4,3 +4,6 @@
 ^\.devcontainer$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^REVIEW_CHECKLIST\.md$
+^STYLE_GUIDE\.md$
+^XGBOOST_RENVIRON_REVIEW\.md$

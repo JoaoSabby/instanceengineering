@@ -32,7 +32,7 @@
 #'   sby_knn_hnsw_ef = 200L
 #' )
 #'
-#' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
+#' @param sby_formula Fórmula no formato `alvo ~ preditores` usada para identificar uma única coluna de desfecho binário e as colunas preditoras numéricas em `sby_data`. O lado direito deve referenciar apenas colunas ja existentes; transformacoes, interacoes e offsets precisam ser materializados antes da chamada. Não possui valor padrão; use `alvo ~ .` para selecionar todos os demais campos como preditores.
 #' @param sby_data Data frame, tibble ou matriz com a coluna de desfecho e as variáveis preditoras numéricas referenciadas em `sby_formula`. Não possui valor padrão. Esses dados definem o espaço no qual as observações majoritárias serão ranqueadas por proximidade à classe minoritária.
 #' @param sby_under_ratio Valor numérico escalar no intervalo `(0, 1]` que representa a razão mínima desejada entre minoria e maioria após a subamostragem. O padrão `0.5` permite reter até duas observações majoritárias para cada minoritária; `1` reduz a maioria até igualar a minoria.
 #' @param sby_knn_under_k Número inteiro positivo de vizinhos minoritários usados para calcular a distância média do critério NearMiss-1. O padrão é `5L`. Valores maiores reduzem variância do ranqueamento; valores menores focalizam a fronteira local e podem selecionar exemplos muito próximos de ruído minoritário.
@@ -196,14 +196,11 @@ sby_nearmiss <- function(
     sby_seed           = sby_seed
   )
 
-  # Verifica se o numero de vizinhos de subamostragem e valido
-  if(!is.numeric(sby_knn_under_k) || length(sby_knn_under_k) != 1L || is.na(sby_knn_under_k) || sby_knn_under_k < 1L){
-
-    # Aborta quando o parametro NearMiss nao representa inteiro positivo
-    sby_adanear_abort(
-      sby_message = "'sby_knn_under_k' deve ser inteiro positivo"
-    )
-  }
+  # Verifica se o numero de vizinhos de subamostragem e inteiro positivo
+  sby_knn_under_k <- sby_validate_positive_integer_scalar(
+    sby_value = sby_knn_under_k,
+    sby_name  = "sby_knn_under_k"
+  )
 
   # Converte os preditores para matriz numerica com nomes preservados
   sby_x_matrix <- sby_adanear_as_numeric_matrix(

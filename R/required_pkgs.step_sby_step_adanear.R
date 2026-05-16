@@ -1,29 +1,12 @@
-#' Listar pacotes requeridos pela etapa de balanceamento
+#' Pacotes requeridos pela etapa ADASYN + NearMiss
 #'
-#' @details
-#' A funcao compoe a interface publica do pacote e valida os contratos de entrada antes de executar a etapa principal
-#' O processamento preserva a semantica dos dados, registra pontos de diagnostico quando aplicavel e mantem retornos explicitos para facilitar auditoria em ambientes de producao
-#' As chamadas auxiliares usam argumentos nomeados para reduzir ambiguidades durante manutencao e revisao de codigo
-#'
-#' @param x Objeto de etapa de balanceamento NearMiss
+#' @param x Objeto de etapa de balanceamento ADASYN + NearMiss
 #' @param ... Argumentos adicionais preservados para compatibilidade S3
 #'
 #' @return Vetor de nomes dos pacotes requeridos
 #' @export
 required_pkgs.step_sby_step_adanear <- function(x, ...){
-  
-  # Retorna dependencias necessarias para execucao da etapa recipes
-  return(c(
-    "recipes",
-    "RcppHNSW",
-    "instenginer",
-    "FNN", 
-    "generics", 
-    "rlang", 
-    "Rfast", 
-    "tibble",
-    "cli"
-  ))
+  return(sby_required_sampling_pkgs())
 }
 ####
 ## Fim

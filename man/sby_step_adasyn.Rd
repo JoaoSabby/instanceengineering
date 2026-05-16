@@ -43,7 +43,7 @@ sby_step_adasyn(
 \item{sby_knn_hnsw_ef}{Lista dinâmica HNSW configurada.}
 \item{skip}{Indicador lógico escalar que define se a etapa deve ser ignorada em novos dados.}
 \item{id}{Identificador recipes da etapa.}
-\item{sby_over_ratio}{Valor numérico escalar que controla a expansão relativa da classe minoritária.}
+\item{sby_over_ratio}{Valor numérico escalar positivo que controla a expansão relativa da classe minoritária. Em bases pequenas, valores positivos geram ao menos uma linha sintética para evitar abortos por arredondamento.}
 \item{sby_knn_over_k}{Número inteiro positivo de vizinhos usados pela etapa ADASYN.}
 }
 \value{Objeto \code{recipe} com uma etapa \code{sby_step_adasyn} adicionada ao pipeline.}

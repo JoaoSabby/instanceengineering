@@ -51,7 +51,7 @@ sby_validate_sampling_inputs <- function(
 
     # Aborta quando preditores contem valores ausentes
     sby_adanear_abort(
-      sby_message = "'sby_predictor_data' nao pode conter NA"
+      sby_message = "'sby_predictor_data' nao pode conter NA ou NaN"
     )
   }
 
@@ -99,6 +99,15 @@ sby_validate_sampling_inputs <- function(
     )
   }
 
+  # Verifica ausencia de valores infinitos nos preditores numericos
+  if(any(!is.finite(as.matrix(sby_x_check)))){
+
+    # Aborta quando preditores contem Inf ou -Inf, que invalidam escala e KNN
+    sby_adanear_abort(
+      sby_message = "'sby_predictor_data' nao pode conter Inf ou -Inf"
+    )
+  }
+
   # Converte alvo para fator para validacao de classes
   sby_target_factor <- as.factor(
     x = sby_target_vector
@@ -127,14 +136,10 @@ sby_validate_sampling_inputs <- function(
     )
   }
 
-  # Verifica se a semente e um escalar numerico finito
-  if(!(is.numeric(sby_seed) && length(sby_seed) == 1L && !is.na(sby_seed) && is.finite(sby_seed))){
-
-    # Aborta quando a semente nao atende ao contrato esperado
-    sby_adanear_abort(
-      sby_message = "'sby_seed' deve ser escalar numerico"
-    )
-  }
+  # Valida a semente e evita truncamentos silenciosos em set.seed()
+  sby_validate_seed(
+    sby_seed = sby_seed
+  )
 
   # Retorna sucesso invisivel apos validacao das entradas
   return(invisible(TRUE))
