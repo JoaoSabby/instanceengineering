@@ -32,22 +32,28 @@ jobs:
           echo "Dockerfile:"
           sed -n '1,240p' docker/oraclelinux97-r453/Dockerfile
 
-          echo "Renviron:"
-          sed -n '1,240p' docker/oraclelinux97-r453/r-config/.Renviron
-
-          echo "Rprofile:"
-          sed -n '1,240p' docker/oraclelinux97-r453/r-config/.Rprofile
-
-          echo "Makevars:"
-          sed -n '1,240p' docker/oraclelinux97-r453/r-config/Makevars
+          echo "R configuration files:"
+          for config_file in \
+            docker/oraclelinux97-r453/r-config/.Renviron \
+            docker/oraclelinux97-r453/r-config/.Rprofile \
+            docker/oraclelinux97-r453/r-config/Makevars; do
+            echo "${config_file}:"
+            if [ -f "${config_file}" ]; then
+              sed -n '1,240p' "${config_file}"
+            else
+              echo "not present"
+            fi
+          done
 
           echo "Searching unsupported packages:"
-          grep -R -n "qpdf" docker/oraclelinux97-r453 || true
+          find docker/oraclelinux97-r453 -type f -print0 | xargs -0 -r grep -n "qpdf" || true
 
           echo "Searching sensitive terms:"
-          grep -R -n -i "password\|secret\|credential\|user\|host\|database\|dbname\" \
-            docker/oraclelinux97-r453/r-config \
-            .github/workflows/main.yml || true
+          search_paths=(.github/workflows/main.yml)
+          if [ -d docker/oraclelinux97-r453/r-config ]; then
+            search_paths+=(docker/oraclelinux97-r453/r-config)
+          fi
+          grep -R -n -i -E 'password|secret|credential|user|host|database|dbname' "${search_paths[@]}" || true
 
       - name: Build Oracle Linux image
         run: |

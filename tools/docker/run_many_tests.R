@@ -26,7 +26,7 @@ GetInstanceId <- function(){
     return(envInstanceId)
   }
   
-  return(str_c(Sys.info()[["nodename"]], "_", Sys.getpid()))
+  return(paste0(Sys.info()[["nodename"]], "_", Sys.getpid()))
 }
 
 CreateTestData <- function(){
@@ -242,7 +242,7 @@ Main <- function(){
   
   outputPath <- file.path(
     outputDir,
-    str_c("instenginer_tests_", gsub("[^A-Za-z0-9_]+", "_", instanceId), ".csv")
+    paste0("instenginer_tests_", gsub("[^A-Za-z0-9_]+", "_", instanceId), ".csv")
   )
   
   write.csv(
