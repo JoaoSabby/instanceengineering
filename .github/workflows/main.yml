@@ -5,7 +5,8 @@ on:
   push:
     paths:
       - "docker/oraclelinux97-r453/Dockerfile"
-      - ".github/workflows/oraclelinux97-r453.yml"
+      - "docker/oraclelinux97-r453/r-config/**"
+      - ".github/workflows/main.yml"
       - "R/**"
       - "src/**"
       - "DESCRIPTION"
@@ -16,23 +17,37 @@ jobs:
   docker-tests:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show commit and Dockerfile
+      - name: Show commit and configuration files
         run: |
           echo "Commit:"
           git rev-parse HEAD
 
-          echo "Dockerfile path:"
-          ls -lah docker/oraclelinux97-r453/Dockerfile
+          echo "Dockerfile:"
+          sed -n '1,240p' docker/oraclelinux97-r453/Dockerfile
 
-          echo "Dockerfile content:"
-          sed -n '1,180p' docker/oraclelinux97-r453/Dockerfile
+          echo "Renviron:"
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/Renviron
 
-          echo "Searching qpdf:"
-          grep -n "qpdf" docker/oraclelinux97-r453/Dockerfile || true
+          echo "Rprofile:"
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/Rprofile
+
+          echo "Makevars:"
+          sed -n '1,240p' docker/oraclelinux97-r453/r-config/Makevars
+
+          echo "Searching unsupported packages:"
+          grep -R -n "qpdf" docker/oraclelinux97-r453 || true
+
+          echo "Searching sensitive terms:"
+          grep -R -n -i "password\|secret\|credential\|user\|host\|database\|dbname\|oracle\|client\|cliente\|banco" \
+            docker/oraclelinux97-r453/r-config \
+            .github/workflows/main.yml || true
 
       - name: Build Oracle Linux image
         run: |
@@ -52,8 +67,8 @@ jobs:
             -e INSTANCE_ID=gha_1 \
             -e TEST_REPETITIONS=2 \
             -e TEST_KNN_WORKERS=2 \
-            -e TEST_OUTPUT_DIR=/workspace/instenginer/test-results \
-            -v "$PWD/test-results:/workspace/instenginer/test-results" \
+            -e TEST_OUTPUT_DIR=/workspace/r-package-validation/results \
+            -v "$PWD/test-results:/workspace/r-package-validation/results" \
             instenginer:oraclelinux97-r453 \
             Rscript tools/docker/run_many_tests.R
 
@@ -63,8 +78,8 @@ jobs:
             -e INSTANCE_ID=gha_2 \
             -e TEST_REPETITIONS=2 \
             -e TEST_KNN_WORKERS=2 \
-            -e TEST_OUTPUT_DIR=/workspace/instenginer/test-results \
-            -v "$PWD/test-results:/workspace/instenginer/test-results" \
+            -e TEST_OUTPUT_DIR=/workspace/r-package-validation/results \
+            -v "$PWD/test-results:/workspace/r-package-validation/results" \
             instenginer:oraclelinux97-r453 \
             Rscript tools/docker/run_many_tests.R
 
